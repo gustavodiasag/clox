@@ -9,3 +9,9 @@ For short, the amortized cost of *n* operations is the total cost of the operati
 Since `realloc()` only takes a pointer to the first byte of a block of memory, under the hood, the memory allocator maintains additional bookkeping information for each block of heap-allocated memory, including its size.
 
 Given a pointer to some previously allocated memory, it can find this bookkeping information, which is necessary to be able to cleanly free it. It's this size metadata that `realloc()` updates.
+
+# Value representation
+
+For small fixed-size values like integers, many instruction sets store the value directly in the code stream right after the operational code. these are called **immediate instructions** because the bits for the value are immediately after the opcode.
+
+However, that doesn't work well for large or variable-sized constants. Those are instead stored in a separate "constant data" region in the binary executable. Then, the instruction to load a constant has an address pointing to where the value is stored in that section. Most virtual machines do something similar, like the JVM's [constant pools](https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.4).
