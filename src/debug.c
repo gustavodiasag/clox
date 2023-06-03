@@ -3,7 +3,7 @@
 #include "debug.h"
 #include "value.h"
 
-void disassemble_chunk(Chunk *chunk, const char *name)
+void disassemble_chunk(Chunk *chunk, const char *name) // Prints all the instructions in a chunk.
 {
     printf("== %s ==\n", name);
 
@@ -13,9 +13,8 @@ void disassemble_chunk(Chunk *chunk, const char *name)
 }
 
 /*
- * After disassembling the instruction at the given offset,
- * returns the offset of the next instruction, since
- * instructions can have different sizes.
+ * After disassembling the instruction at the given offset, returns the offset
+ * of the next instruction, since instructions can have different sizes.
  */
 int disassemble_instruction(Chunk *chunk, int offset)
 {

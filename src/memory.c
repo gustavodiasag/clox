@@ -1,7 +1,11 @@
-#include <stdlib.h >
+#include <stdlib.h>
 
 #include "memory.h"
 
+/*
+ * Responsible for allocating, freeing, shrinking and expanding
+ * the size of an existing dynamic allocation.
+ */
 void *reallocate(void *pointer, size_t old_size, size_t new_size)
 {
     if (new_size == 0) {

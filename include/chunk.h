@@ -1,5 +1,4 @@
-#ifndef clox_chunk_h
-#define clox_chunk_h
+#pragma once
 
 #include "common.h"
 #include "value.h"
@@ -14,10 +13,9 @@ typedef enum {
 } OpCode;
 
 /*
- * Represents a dynamic array of instructions. Some of
- * the benefits provided include dense storage, which
- * is cache-friendly, constant-time indexed element
- * lookup and appending to the end of the array.
+ * Represents a dynamic array of instructions. Some of the benefits provided
+ * include dense storage, which is cache-friendly, constant-time indexed
+ * element lookup and appending to the end of the array.
  */
 typedef struct {
     int count; // Allocated entries in use.
@@ -31,5 +29,3 @@ void init_chunk(Chunk *chunk);
 void free_chunk(Chunk *chunk);
 void write_chunk(Chunk *chunk, uint8_t byte, int line);
 int add_constant(Chunk *chunk, Value value);
-
-#endif
