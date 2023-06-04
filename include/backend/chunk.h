@@ -7,7 +7,12 @@
 // (opcode) that defines its application.
 typedef enum {
     OP_CONSTANT,
-    OP_RETURN,
+    OP_ADD,
+    OP_SUBTRACT,
+    OP_MULTIPLY,
+    OP_DIVIDE,
+    OP_NEGATE,
+    OP_RETURN
 } OpCode;
 
 // Represents a dynamic array of instructions. Provides dense storage,

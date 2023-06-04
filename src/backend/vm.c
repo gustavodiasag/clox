@@ -21,7 +21,7 @@ static InterpretResult run()
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 
     for (;;) {
-        #ifdef DEBUG_TRACE_EXECUTION
+#ifdef DEBUG_TRACE_EXECUTION
             printf("          ");
 
             for (Value *v = vm.stack; v < vm.stack_top; v++) {
@@ -32,16 +32,18 @@ static InterpretResult run()
             printf("\n");
 
             disassemble_instruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
-        #endif
+#endif
 
         uint8_t instruction;
 
         switch(instruction = READ_BYTE()) {
-           case OP_CONSTANT: {
+           case OP_CONSTANT:
                 Value constant = READ_CONSTANT();
                 push(constant);
                 break;
-            }
+            case OP_NEGATE:
+                push(-pop());
+                break;
             case OP_RETURN:
                 print_value(pop());
                 printf("\n");

@@ -7,4 +7,6 @@ cmake --build .
 
 ./clox
 
+cd ..
+
 rm -r build
