@@ -4,10 +4,8 @@
 
 typedef double Value;
 
-/*
- * Each chunk will carry with it a list of values that appear
- * as literals in the program.
- */
+// Each chunk will carry with it a list of values that appear
+// as literals in the program.
 typedef struct {
     int capacity;
     int count;

@@ -1,7 +1,7 @@
+#include "backend/chunk.h"
+#include "backend/vm.h"
 #include "common.h"
-#include "chunk.h"
 #include "debug.h"
-#include "back-end/vm.h"
 
 int main(int argc, const char *argv[])
 {

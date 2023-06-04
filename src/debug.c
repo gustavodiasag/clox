@@ -3,6 +3,22 @@
 #include "debug.h"
 #include "value.h"
 
+static int constant_instruction(const char *name, Chunk *chunk, int offset)
+{
+    uint8_t constant = chunk->code[offset + 1];
+    printf("%-16s %4d '", name, constant);
+    print_value(chunk->constants.values[constant]);
+    printf("'\n");
+    // Constant instructions take two bytes, one for the opcode and one for the operand.
+    return offset + 2;
+}
+
+static int simple_instruction(const char *name, int offset)
+{
+    printf("%s\n", name);
+    return offset + 1;
+}
+
 void disassemble_chunk(Chunk *chunk, const char *name) // Prints all the instructions in a chunk.
 {
     printf("== %s ==\n", name);
@@ -12,10 +28,8 @@ void disassemble_chunk(Chunk *chunk, const char *name) // Prints all the instruc
     }
 }
 
-/*
- * After disassembling the instruction at the given offset, returns the offset
- * of the next instruction, since instructions can have different sizes.
- */
+// After disassembling the instruction at the given offset, returns the offset
+// of the next instruction, since instructions can have different sizes.
 int disassemble_instruction(Chunk *chunk, int offset)
 {
     printf("%04d ", offset);
@@ -36,20 +50,4 @@ int disassemble_instruction(Chunk *chunk, int offset)
             printf("Unknown opcode %d", instruction);
             return offset + 1;
     }
-}
-
-static int constant_instruction(const char *name, Chunk *chunk, int offset)
-{
-    uint8_t constant = chunk->code[offset + 1];
-    printf("%-16s %4d '", name, constant);
-    print_value(chunk->constants.values[constant]);
-    printf("'\n");
-    // Constant instructions take two bytes, one for the opcode and one for the operand.
-    return offset + 2;
-}
-
-static int simple_instruction(const char *name, int offset)
-{
-    printf("%s\n", name);
-    return offset + 1;
 }
