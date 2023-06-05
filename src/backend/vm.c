@@ -4,7 +4,7 @@
 #include "debug.h"
 #include "backend/vm.h"
 
-VM vm; // FIXME: Should be manipulated through pointers.
+VM vm; // FIXME: Should be manipulated with pointers.
 
 static void reset_stack()
 {
@@ -19,19 +19,25 @@ static InterpretResult run()
 // Reads the next byte from the bytecode, treats the resulting number as an
 // index and looks up the corresponding Value in the chunk's constant table
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define BINARY_OP(op) \
+    do { \
+        double b = pop(); \
+        double a = pop(); \
+        push(a op b); \
+    } while (false); // Ensures that all statements are within the same scope.
 
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
-            printf("          ");
+        printf("          ");
 
-            for (Value *v = vm.stack; v < vm.stack_top; v++) {
-                printf("[ ");
-                print_value(*v);
-                printf(" ]");
-            }
-            printf("\n");
+        for (Value *v = vm.stack; v < vm.stack_top; v++) {
+            printf("[ ");
+            print_value(*v);
+            printf(" ]");
+        }
+        printf("\n");
 
-            disassemble_instruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
+        disassemble_instruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
 #endif
 
         uint8_t instruction;
@@ -41,8 +47,20 @@ static InterpretResult run()
                 Value constant = READ_CONSTANT();
                 push(constant);
                 break;
+            case OP_ADD:
+                BINARY_OP(+);
+                break;
+            case OP_SUBTRACT:
+                BINARY_OP(-);
+                break;
+            case OP_MULTIPLY:
+                BINARY_OP(*);
+                break;
+            case OP_DIVIDE:
+                BINARY_OP(/);
+                break;
             case OP_NEGATE:
-                push(-pop());
+                *(vm.stack_top - 1) = -*(vm.stack_top - 1);
                 break;
             case OP_RETURN:
                 print_value(pop());
@@ -52,6 +70,7 @@ static InterpretResult run()
     }
 #undef READ_BYTE
 #undef READ_CONSTANT
+#undef BINARY_OP
 }
 
 void init_vm()
