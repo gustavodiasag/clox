@@ -1,9 +1,9 @@
 #include <stdio.h>
 
 #include "debug.h"
-#include "value.h"
+#include "backend/value.h"
 
-static int constant_instruction(const char *name, Chunk *chunk, int offset)
+static int constant_instruction(const char *name, chunk_t *chunk, int offset)
 {
     uint8_t constant = chunk->code[offset + 1];
     printf("%-16s %4d '", name, constant);
@@ -19,7 +19,7 @@ static int simple_instruction(const char *name, int offset)
     return offset + 1;
 }
 
-void disassemble_chunk(Chunk *chunk, const char *name) // Prints all the instructions in a chunk.
+void disassemble_chunk(chunk_t *chunk, const char *name) // Prints all the instructions in a chunk.
 {
     printf("== %s ==\n", name);
 
@@ -30,7 +30,7 @@ void disassemble_chunk(Chunk *chunk, const char *name) // Prints all the instruc
 
 // After disassembling the instruction at the given offset, returns the offset
 // of the next instruction, since instructions can have different sizes.
-int disassemble_instruction(Chunk *chunk, int offset)
+int disassemble_instruction(chunk_t *chunk, int offset)
 {
     printf("%04d ", offset);
 

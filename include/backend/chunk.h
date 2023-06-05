@@ -13,7 +13,7 @@ typedef enum {
     OP_DIVIDE,
     OP_NEGATE,
     OP_RETURN
-} OpCode;
+} op_code_t;
 
 // Represents a dynamic array of instructions. Provides dense storage,
 // constant-time indexed lookup and appending to the end of the array.
@@ -22,10 +22,10 @@ typedef struct {
     int capacity;
     uint8_t *code;
     int *lines;
-    ValueArray constants;
-} Chunk;
+    value_array_t constants;
+} chunk_t;
 
-void init_chunk(Chunk *chunk);
-void free_chunk(Chunk *chunk);
-void write_chunk(Chunk *chunk, uint8_t byte, int line);
-int add_constant(Chunk *chunk, Value value);
+void init_chunk(chunk_t *chunk);
+void free_chunk(chunk_t *chunk);
+void write_chunk(chunk_t *chunk, uint8_t byte, int line);
+int add_constant(chunk_t *chunk, value_t value);
