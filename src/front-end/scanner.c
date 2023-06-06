@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "common.h"
-#include "fron-tend/token.h"
+#include "front-end/token.h"
 #include "front-end/scanner.h"
 
 scanner_t scanner;
@@ -69,7 +69,7 @@ token_t scan_token()
     return error_token("Unexpected character.");
 }
 
-token_t make_token(token_type_t type)
+static token_t make_token(token_type_t type)
 {
     token_t token;
 
@@ -81,7 +81,7 @@ token_t make_token(token_type_t type)
     return token;
 }
 
-token_t error_token(const char *message)
+static token_t error_token(const char *message)
 {
     token_t token;
 
@@ -93,7 +93,7 @@ token_t error_token(const char *message)
     return token;
 }
 
-token_t identifier()
+static token_t identifier()
 {
     while (is_alpha(peek()) || is_digit(peek()))
         advance();
@@ -101,7 +101,7 @@ token_t identifier()
     return make_token(identifier_type());
 }
 
-token_t string()
+static token_t string()
 {
     while (peek() != '"' && !is_at_end()) {
         if (peek() == '\n')
@@ -118,7 +118,7 @@ token_t string()
     return make_token(TOKEN_STRING);
 }
 
-token_t number()
+static token_t number()
 {
     while (is_digit(peek()))
         advance();
@@ -134,7 +134,7 @@ token_t number()
     return make_token(TOKEN_NUMBER);
 }
 
-token_type_t identifier_type()
+static token_type_t identifier_type()
 {
     switch (scanner.start[0]) {
         case 'a':
@@ -186,7 +186,7 @@ token_type_t identifier_type()
     return TOKEN_IDENTIFIER;
 }
 
-token_type_t check_keyword(int start, int length, const char *rest, token_type_t type)
+static token_type_t check_keyword(int start, int length, const char *rest, token_type_t type)
 {
     if (scanner.current - scanner.start == start + length
         && memcmp(scanner.start + start, rest, length) == 0) {
@@ -196,7 +196,7 @@ token_type_t check_keyword(int start, int length, const char *rest, token_type_t
     return TOKEN_IDENTIFIER;
 }
 
-void skip_whitespace()
+static void skip_whitespace()
 {
     while (true) {
         char c = peek();
@@ -223,12 +223,12 @@ void skip_whitespace()
     }
 }
 
-char peek()
+static char peek()
 {
     return *scanner.current;
 }
 
-char peek_next()
+static char peek_next()
 {
     if (is_at_end())
         return '\0';
@@ -236,7 +236,7 @@ char peek_next()
     return scanner.current[1];
 }
 
-bool match(char c)
+static bool match(char c)
 {
     if (is_at_end())
         return false;
@@ -249,26 +249,26 @@ bool match(char c)
     return true;
 }
 
-char advance()
+static char advance()
 {
     scanner.current++;
 
     return scanner.current[-1];
 }
 
-bool is_alpha(char c)
+static bool is_alpha(char c)
 {
     return (c >= 'a' && c <= 'z')
         || (c >= 'A' && c <= '|')
         || (c == '_');
 }
 
-bool is_digit(char c)
+static bool is_digit(char c)
 {
     return c >= '0' && c <= '9';
 }
 
-bool is_at_end()
+static bool is_at_end()
 {
     return *scanner.current == '\0';
 }
