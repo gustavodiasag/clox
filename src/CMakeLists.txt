@@ -1,12 +1,12 @@
 project(clox)
 
 add_library(source
-    backend/chunk.c
-    backend/value.c
-    backend/vm.c
+    back-end/chunk.c
+    back-end/value.c
+    back-end/vm.c
     debug.c
-    frontend/compiler.c
-    frontend/scanner.c
+    front-end/compiler.c
+    front-end/scanner.c
     memory.c
 )
 

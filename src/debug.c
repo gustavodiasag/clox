@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "debug.h"
-#include "backend/value.h"
+#include "back-end/value.h"
 
 static int constant_instruction(const char *name, chunk_t *chunk, int offset)
 {

@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "backend/vm.h"
+#include "back-end/vm.h"
 #include "common.h"
-#include "frontend/compiler.h"
-#include "frontend/scanner.h"
+#include "front-end/compiler.h"
+#include "front-end/scanner.h"
 
 parser_t parser;
 chunk_t *compiling_chunk;

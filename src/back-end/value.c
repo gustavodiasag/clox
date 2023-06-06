@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "memory.h"
-#include "backend/value.h"
+#include "back-end/value.h"
 
 void init_value_array(value_array_t *array)
 {

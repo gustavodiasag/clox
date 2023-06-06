@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "backend/chunk.h"
-#include "backend/vm.h"
+#include "back-end/chunk.h"
+#include "back-end/vm.h"
 #include "common.h"
 #include "debug.h"
 

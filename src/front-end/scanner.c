@@ -2,8 +2,8 @@
 #include <string.h>
 
 #include "common.h"
-#include "frontend/token.h"
-#include "frontend/scanner.h"
+#include "fron-tend/token.h"
+#include "front-end/scanner.h"
 
 scanner_t scanner;
 

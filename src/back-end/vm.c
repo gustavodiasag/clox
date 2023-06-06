@@ -1,8 +1,8 @@
 #include <stdio.h>
 
-#include "backend/vm.h"
+#include "back-end/vm.h"
 #include "common.h"
-#include "frontend/compiler.h"
+#include "front-end/compiler.h"
 #include "debug.h"
 
 vm_t vm; // FIXME: Should be manipulated with pointers.
