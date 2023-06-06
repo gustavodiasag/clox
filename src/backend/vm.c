@@ -99,7 +99,22 @@ value_t pop()
 
 interpret_result_t interpret(const char *source)
 {
-    compile(source);
+    chunk_t chunk;
 
-    return INTERPRET_OK;
+    init_chunk(&chunk);
+
+    if (!compile(source, &chunk)) {
+        free_chunk(&chunk);
+
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    vm.chunk = &chunk;
+    vm.ip = vm.chunk->code;
+
+    interpret_result_t result = run();
+
+    free_chunk(&chunk);
+
+    return result;
 }
