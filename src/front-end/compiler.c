@@ -6,6 +6,10 @@
 #include "front-end/compiler.h"
 #include "front-end/scanner.h"
 
+#ifdef DEBUG_PRINT_CODE
+#include "debug.h"
+#endif
+
 parser_t parser;
 chunk_t *compiling_chunk;
 
@@ -129,6 +133,26 @@ static parse_rule_t *get_rule(token_type_t type)
     return &rules[type];
 }
 
+static void parse_precedence(precedence_t precedence)
+{
+    advance();
+
+    parse_fn_t prefix_rule = get_rule(parser.previous.type)->prefix;
+
+    if (prefix_rule == NULL) {
+        error("Expect expression.");
+        return;
+    }
+    
+    prefix_rule(); // Compiles the rest of the prefix expression, consuming the necessary tokens.
+
+    while (precedence <= get_rule(parser.current.type)->precedence) {
+        advance();
+        parse_fn_t infix_rule = get_rule(parser.previous.type)->infix;
+        infix_rule();
+    }
+}
+
 static void expression()
 {
     parse_precedence(PREC_ASSIGN);
@@ -198,6 +222,10 @@ static chunk_t *current_chunk()
 static void end_compiler()
 {
     emit_return();
+#ifdef DEBUG_PRINT_CODE
+    if (!parser.had_error)
+        dissassemble_chunk(current_chunk(), "code");
+#endif
 }
 
 static void emit_return()
