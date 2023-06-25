@@ -7,7 +7,8 @@
 
 typedef struct {
     chunk_t *chunk;
-    uint8_t *ip; // Keeps track of where the instruction about to be executed is.
+    // Keeps track of where the instruction about to be executed is.
+    uint8_t *ip;
     value_t stack[STACK_MAX]; 
     value_t *stack_top;
 } vm_t;

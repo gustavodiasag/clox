@@ -7,8 +7,8 @@
 
 // Gets the size of the array's element type and casts the
 // resulting void pointer back to the right type.
-#define GROW_ARRAY(type, pointer, old_count, new_count) \
-    (type *)reallocate(pointer, sizeof(type) * old_count, \
+#define GROW_ARRAY(type, pointer, old_count, new_count)     \
+    (type *)reallocate(pointer, sizeof(type) * old_count,   \
         sizeof(type) * new_count)
 
 #define FREE_ARRAY(type, pointer, old_count) \

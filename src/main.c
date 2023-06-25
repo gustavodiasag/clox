@@ -11,7 +11,7 @@ void repl()
 {
     char line[1024];
 
-    for (;;) {
+    while (true) {
         printf("> ");
 
         if (!fgets(line, sizeof(line), stdin)) {

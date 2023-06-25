@@ -22,7 +22,7 @@ typedef enum {
     TOKEN_GREATER_EQUAL,
     TOKEN_LESS,
     TOKEN_LESS_EQUAL,
-    // Literals,
+    // Literals.
     TOKEN_IDENTIFIER,
     TOKEN_STRING,
     TOKEN_NUMBER,
