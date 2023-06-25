@@ -13,14 +13,17 @@ Besides the main purpose of the book, which is the actual implementation of the 
 In order to build and compile clox, you need to install CMake. After setting it up, build the project as follows:
 
 ```bash
-https://github.com/gustavodiasag/clox.git
+git clone https://github.com/gustavodiasag/clox.git
+
 cd clox/
+
 mkdir build
 cd build
+
 cmake ..
 cmake --build .
 ```
 
 # License
 
-This project is licensed under the [MIT License](LICENSE)
+This project is licensed under the [MIT License](LICENSE).
