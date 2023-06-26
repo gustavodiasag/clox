@@ -30,31 +30,31 @@ parse_rule_t rules[] = {
     [TOKEN_SEMICOLON]       = {NULL, NULL, PREC_NONE},
     [TOKEN_SLASH]           = {NULL, binary, PREC_FACTOR},
     [TOKEN_STAR]            = {NULL, binary, PREC_FACTOR},
-    [TOKEN_BANG]            = {NULL, NULL, PREC_NONE},
-    [TOKEN_BANG_EQUAL]      = {NULL, NULL, PREC_NONE},
+    [TOKEN_BANG]            = {unary, NULL, PREC_NONE},
+    [TOKEN_BANG_EQUAL]      = {NULL, binary, PREC_EQUAL},
     [TOKEN_EQUAL]           = {NULL, NULL, PREC_NONE},
-    [TOKEN_EQUAL_EQUAL]     = {NULL, PREC_NONE},
-    [TOKEN_GREATER]         = {NULL, NULL, PREC_NONE},
-    [TOKEN_GREATER_EQUAL]   = {NULL, NULL, PREC_NONE},
-    [TOKEN_LESS]            = {NULL, NULL, PREC_NONE},
-    [TOKEN_LESS_EQUAL]      = {NULL, NULL, PREC_NONE},
+    [TOKEN_EQUAL_EQUAL]     = {NULL, binary, PREC_NONE},
+    [TOKEN_GREATER]         = {NULL, binary, PREC_COMPARE},
+    [TOKEN_GREATER_EQUAL]   = {NULL, binary, PREC_COMPARE},
+    [TOKEN_LESS]            = {NULL, binary, PREC_COMPARE},
+    [TOKEN_LESS_EQUAL]      = {NULL, binary, PREC_COMPARE},
     [TOKEN_IDENTIFIER]      = {NULL, NULL, PREC_NONE},
     [TOKEN_STRING]          = {NULL, NULL, PREC_NONE},
     [TOKEN_NUMBER]          = {number, NULL, PREC_NONE},
     [TOKEN_AND]             = {NULL, NULL, PREC_NONE},
     [TOKEN_CLASS]           = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE]            = {NULL, NULL, PREC_NONE},
-    [TOKEN_FALSE]           = {NULL, NULL, PREC_NONE},
+    [TOKEN_FALSE]           = {literal, NULL, PREC_NONE},
     [TOKEN_FOR]             = {NULL, NULL, PREC_NONE},
     [TOKEN_FUN]             = {NULL, NULL, PREC_NONE},
     [TOKEN_IF]              = {NULL, NULL, PREC_NONE},
-    [TOKEN_NIL]             = {NULL, NULL, PREC_NONE},
+    [TOKEN_NIL]             = {literal, NULL, PREC_NONE},
     [TOKEN_OR]              = {NULL, NULL, PREC_NONE},
     [TOKEN_PRINT]           = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN]          = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER]           = {NULL, NULL, PREC_NONE},
     [TOKEN_THIS]            = {NULL, NULL, PREC_NONE},
-    [TOKEN_TRUE]            = {NULL, NULL, PREC_NONE},
+    [TOKEN_TRUE]            = {literal, NULL, PREC_NONE},
     [TOKEN_VAR]             = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE]           = {NULL, NULL, PREC_NONE},
     [TOKEN_ERROR]           = {NULL, NULL, PREC_NONE},
@@ -178,7 +178,7 @@ static void end_compiler()
     emit_return();
 #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error)
-        disassemble_chunk(current_chunk(), "code");
+        disassemble_chunk(current_chunk());
 #endif
 }
 
@@ -254,6 +254,24 @@ static void binary()
     parse_precedence((precedence_t)(rule->precedence + 1));
 
     switch (operator_type) {
+        case TOKEN_BANG_EQUAL:
+            emit_bytes(OP_EQUAL, OP_NOT);
+            break;
+        case TOKEN_EQUAL_EQUAL:
+            emit_byte(OP_EQUAL);
+            break;
+        case TOKEN_GREATER:
+            emit_byte(OP_GREATER);
+            break;
+        case TOKEN_GREATER_EQUAL:
+            emit_bytes(OP_LESS, OP_NOT);
+            break;
+        case TOKEN_LESS:
+            emit_byte(OP_LESS);
+            break;
+        case TOKEN_LESS_EQUAL:
+            emit_bytes(OP_GREATER, OP_NOT);
+            break;
         case TOKEN_PLUS:
             emit_byte(OP_ADD);
             break;
@@ -267,7 +285,7 @@ static void binary()
             emit_byte(OP_DIVIDE);
             break;
         default:
-            return; // Unreachable.
+            return;
     }
 }
 
@@ -279,10 +297,30 @@ static void unary()
     parse_precedence(PREC_UNARY); // Compile the operand.
 
     switch (operator_type) { // Emit the operator instruction.
+        case TOKEN_BANG:
+            emit_byte(OP_NOT);
+            break;
         case TOKEN_MINUS:
             emit_byte(OP_NEGATE);
             break;
         default:
-            return; // Unreachable.
+            return;
+    }
+}
+
+static void literal()
+{
+    switch (parser.previous.type) {
+        case TOKEN_FALSE:
+            emit_byte(OP_FALSE);
+            break;
+        case TOKEN_TRUE:
+            emit_byte(OP_TRUE);
+            break;
+        case TOKEN_NIL:
+            emit_byte(OP_NIL);
+            break;
+        default:
+            return;
     }
 }

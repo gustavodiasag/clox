@@ -16,7 +16,7 @@ static void reset_stack()
 /// @brief Variadic function for runtime error reporting.
 /// @param format specifies the output string format
 /// @param params arguments to be printed according to the format
-static void runtime_error(const char *format, ...)
+static void runtime_err(const char *format, ...)
 {
     // Enables passing an arbitrary number of arguments to the function.
     va_list args;
@@ -41,6 +41,14 @@ static value_t peek(int offset)
     return vm.stack_top[-1 - offset];
 }
 
+/// @brief Checks if the specified value has a false behaviour.
+/// @param value 
+/// @return whether the value is true or not
+static bool is_falsey(value_t value)
+{
+    return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
 static interpret_result_t run()
 {
 // Reads the byte currently pointed at and advances the instruction pointer.
@@ -49,11 +57,15 @@ static interpret_result_t run()
 // Reads the next byte from the bytecode, treats the resulting number as an
 // index and looks up the corresponding value in the chunk's constant table.
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
-#define BINARY_OP(op)       \
-    do {                    \
-        double b = pop();   \
-        double a = pop();   \
-        push(a op b);       \
+#define BINARY_OP(value_type, op)                       \
+    do {                                                \
+        if (!IS_NUM(peek(0)) || !IS_NUM(peek(1))) {     \
+            runtime_err("Operands must be numbers");    \
+            return INTERPRET_RUNTIME_ERROR;             \
+        }                                               \
+        double b = AS_NUM(pop());                       \
+        double a = AS_NUM(pop());                       \
+        push(value_type(a op b));                       \
     } while (false); // Ensures that all statements are within the same scope.
 
     while (true) {
@@ -75,17 +87,29 @@ static interpret_result_t run()
            case OP_CONSTANT:
                 push(READ_CONSTANT());
                 break;
+            case OP_NIL:
+                push(NIL_VAL);
+                break;
+            case OP_TRUE:
+                push(BOOL_VAL(true));
+                break;
+            case OP_FALSE:
+                push(BOOL_VAL(false));
+                break;
             case OP_ADD:
-                BINARY_OP(+);
+                BINARY_OP(NUM_VAL, +);
                 break;
             case OP_SUBTRACT:
-                BINARY_OP(-);
+                BINARY_OP(NUM_VAL, -);
                 break;
             case OP_MULTIPLY:
-                BINARY_OP(*);
+                BINARY_OP(NUM_VAL, *);
                 break;
             case OP_DIVIDE:
-                BINARY_OP(/);
+                BINARY_OP(NUM_VAL, /);
+                break;
+            case OP_NOT:
+                push(BOOL_VAL(is_falsey(pop())));
                 break;
             case OP_NEGATE:
                 if (!IS_NUM(peek(0))) {

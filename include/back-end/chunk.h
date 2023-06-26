@@ -7,13 +7,20 @@
 // (opcode) that defines its application.
 typedef enum {
     OP_CONSTANT,
+    OP_NIL,
+    OP_TRUE,
+    OP_FALSE,
+    OP_EQUAL,
+    OP_GREATER,
+    OP_LESS,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
+    OP_NOT,
     OP_NEGATE,
     OP_RETURN
-} op_code_t;
+} op_code_t; // FIXME: Add support for `<=`, `!=` and `>=`.
 
 // Represents a dynamic array of instructions. Provides dense storage,
 // constant-time indexed lookup and appending to the end of the array.

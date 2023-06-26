@@ -39,3 +39,4 @@ static void grouping();
 static void binary();
 static void unary();
 static void number();
+static void literal();
