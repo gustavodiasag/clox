@@ -96,6 +96,17 @@ static interpret_result_t run()
             case OP_FALSE:
                 push(BOOL_VAL(false));
                 break;
+            case OP_EQUAL:
+                value_t b = pop();
+                value_t a = pop();
+                push(BOOL_VAL(values_equal(a, b)));
+                break;
+            case OP_GREATER:
+                BINARY_OP(BOOL_VAL, >);
+                break;
+            case OP_LESS:
+                BINARY_OP(BOOL_VAL, <);
+                break;
             case OP_ADD:
                 BINARY_OP(NUM_VAL, +);
                 break;
@@ -173,4 +184,25 @@ interpret_result_t interpret(const char *source)
     free_chunk(&chunk);
 
     return result;
+}
+
+/// @brief Compares the equality between two values, allowing multiple types.
+/// @param a first value
+/// @param b second value
+/// @return whether the values are different or not
+bool values_equal(value_t a, value_t b)
+{
+    if (a.type != b.type)
+        return false;
+    
+    switch (a.type) {
+        case VAL_BOOL:
+            return AS_BOOL(a) == AS_BOOL(b);
+        case VAL_NIL:
+            return true;
+        case VAL_NUM:
+            return AS_NUM(a) == AS_NUM(b);
+        default:
+            return false;
+    }
 }
