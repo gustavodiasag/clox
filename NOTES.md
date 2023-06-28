@@ -48,10 +48,15 @@ While allocating memory for a structure, the C compiler may adjust the amount of
 # Hashing terms
 
 - **Collisions**: keys mapping to the same entries in a table.
+
 - **Load factor**: the number of entries divided by the total size of the table.
+
 - **Birthday paradox**: as the number of entries in the table increases, the chance of collision quickly rises.
+
 - **Separate chaining**: instead of each bucket containing a single entry, in stores a collection of them.
+
 - **Open adressing**: technique that handles collisions internally, all entries live direcly in the table.
     - **Probing**: process of finding an available bucket.
     - **Probe sequence**: the order that the buckets are examined.
+    
 - **Clustering**: overflow of buckets right next to each other due to similar key values.
