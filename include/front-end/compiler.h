@@ -1,5 +1,6 @@
 #pragma once
 
+#include "back-end/object.h"
 #include "scanner.h"
 
 typedef void (*parse_fn_t)();
@@ -40,3 +41,4 @@ static void binary();
 static void unary();
 static void number();
 static void literal();
+static void string();

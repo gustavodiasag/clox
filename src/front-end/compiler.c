@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "back-end/object.h"
 #include "back-end/vm.h"
 #include "common.h"
 #include "front-end/compiler.h"
@@ -39,7 +40,7 @@ parse_rule_t rules[] = {
     [TOKEN_LESS]            = {NULL, binary, PREC_COMPARE},
     [TOKEN_LESS_EQUAL]      = {NULL, binary, PREC_COMPARE},
     [TOKEN_IDENTIFIER]      = {NULL, NULL, PREC_NONE},
-    [TOKEN_STRING]          = {NULL, NULL, PREC_NONE},
+    [TOKEN_STRING]          = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER]          = {number, NULL, PREC_NONE},
     [TOKEN_AND]             = {NULL, NULL, PREC_NONE},
     [TOKEN_CLASS]           = {NULL, NULL, PREC_NONE},
@@ -233,6 +234,12 @@ static void number()
     double value = strtod(parser.previous.start, NULL);
 
     emit_constant(NUM_VAL(value));
+}
+
+/// @brief Builds a string object directly from the parsed token's lexeme.
+static void string()
+{
+    emit_constant(OBJ_VAL(copy_str(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
 /// @brief Compiles the expression between parenthesis, parsing the closing one.

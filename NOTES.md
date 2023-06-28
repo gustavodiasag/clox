@@ -40,3 +40,7 @@ Which contains four separate instructions, four bytes to represent each of them,
 ```
 add <a> <b> <c> // Read values from a and b, add them and store in c.
 ```
+
+# Structure padding in C
+
+While allocating memory for a structure, the C compiler may adjust the amount of space used by it to optimize read operations on the processor, considering that it is able to obtain a whole word whose size is specified by the computer architecture. For that, one or more empty bytes are inserted or left empty between memory addresses which are allocated for structure members, resulting in an alignment of the data.

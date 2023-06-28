@@ -3,8 +3,8 @@
 #include "common.h"
 #include "value.h"
 
-// Each instruction has a one-byte operational code
-// (opcode) that defines its application.
+// Each instruction has a one-byte operational code that
+// defines its functionality.
 typedef enum {
     OP_CONSTANT,
     OP_NIL,

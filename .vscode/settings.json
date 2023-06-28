@@ -1,6 +1,12 @@
 {
     "files.associations": {
         "common.h": "c",
-        "vm.h": "c"
+        "vm.h": "c",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
     }
 }
