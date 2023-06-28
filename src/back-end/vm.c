@@ -172,11 +172,13 @@ static interpret_result_t run()
 void init_vm()
 {
     reset_stack();
+    vm.objects = NULL;
 }
 
+/// @brief Frees all objects once the program is done executing.
 void free_vm()
 {
-
+    free_objs();
 }
 
 void push(value_t value)

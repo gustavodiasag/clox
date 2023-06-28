@@ -9,6 +9,9 @@
 #define ALLOCATE_OBJ(type, obj_type) \
     (type *)allocate_obj(sizeof(type), obj_type)
 
+#define ALLOCATE_STR(len) \
+    (obj_str_t *)allocate_obj(sizeof(obj_str_t) + sizeof(char[len]), OBJ_STR)
+
 /// @brief Allocates an object of a given size on the heap.
 /// @param size specified number of bytes for varying extra fields
 /// @param type type of the object being allocated
@@ -17,6 +20,9 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
 {
     obj_t *obj = (obj_t *)reallocate(NULL, 0, size);
     obj->type = type;
+    // New object is inserted at the head of the linked list.
+    obj->next = vm.objects;
+    vm.objects = obj;
 
     return obj;
 }
@@ -27,13 +33,17 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
 /// @return pointer to the resulting string object
 static obj_str_t *allocate_str(char *chars, int len)
 {
-    obj_str_t *str = ALLOCATE_OBJ(obj_str_t, OBJ_STR);
+    obj_str_t *str = ALLOCATE_STR(len);
     str->length = len;
-    str->chars = chars;
+    memcpy(str->chars, chars, len);
     
     return str;
 }
 
+/// @brief 
+/// @param chars 
+/// @param len 
+/// @return 
 obj_str_t *take_str(char *chars, int len)
 {
     return allocate_str(chars, len);

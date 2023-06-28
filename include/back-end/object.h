@@ -10,6 +10,7 @@
 #define AS_STR(val)     ((obj_str_t *)AS_OBJ(val))
 #define AS_CSTR(val)    (((obj_str_t *)AS_OBJ(val))->chars)
 
+// All heap-allocated components supported in the language.
 typedef enum {
     OBJ_STR
 } obj_type_t;
@@ -17,13 +18,17 @@ typedef enum {
 struct obj_t{
     // Identifies what kind of object it is.
     obj_type_t type;
+    // Used to track heap allocations.
+    struct obj_t *next;
 };
 
 struct obj_str_t {
     obj_t obj;
     // Used to avoid traversing the string.
     int length;
-    char *chars;
+    // Flexible array member, used to store the object and its
+    // character array in a single contiguous allocation
+    char chars[];
 };
 
 obj_str_t *take_str(char *chars, int len);
