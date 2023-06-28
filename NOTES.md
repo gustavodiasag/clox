@@ -44,3 +44,14 @@ add <a> <b> <c> // Read values from a and b, add them and store in c.
 # Structure padding in C
 
 While allocating memory for a structure, the C compiler may adjust the amount of space used by it to optimize read operations on the processor, considering that it is able to obtain a whole word whose size is specified by the computer architecture. For that, one or more empty bytes are inserted or left empty between memory addresses which are allocated for structure members, resulting in an alignment of the data.
+
+# Hashing terms
+
+- **Collisions**: keys mapping to the same entries in a table.
+- **Load factor**: the number of entries divided by the total size of the table.
+- **Birthday paradox**: as the number of entries in the table increases, the chance of collision quickly rises.
+- **Separate chaining**: instead of each bucket containing a single entry, in stores a collection of them.
+- **Open adressing**: technique that handles collisions internally, all entries live direcly in the table.
+    - **Probing**: process of finding an available bucket.
+    - **Probe sequence**: the order that the buckets are examined.
+- **Clustering**: overflow of buckets right next to each other due to similar key values.
