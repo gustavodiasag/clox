@@ -8,6 +8,7 @@
         "tuple": "cpp",
         "type_traits": "cpp",
         "utility": "cpp",
-        "object.h": "c"
+        "object.h": "c",
+        "memory.h": "c"
     }
 }

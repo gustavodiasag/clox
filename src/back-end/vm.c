@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
+#include "back-end/object.h"
 #include "back-end/vm.h"
 #include "common.h"
 #include "front-end/compiler.h"
 #include "debug.h"
+#include "memory.h"
 
 vm_t vm; // FIXME: Should be manipulated through pointers.
 
@@ -47,6 +50,23 @@ static value_t peek(int offset)
 static bool is_falsey(value_t value)
 {
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+/// @brief Concatenates two string objects.
+static void concat()
+{
+    obj_str_t *b = AS_STR(pop());
+    obj_str_t *a = AS_STR(pop());
+
+    int len = a->length + b->length;
+    char *chars = ALLOCATE(char, len + 1);
+
+    memcpy(chars, a->chars, a->length);
+    memcpy(chars + a->length, b->chars, b->length);
+    chars[len] = '\0';
+
+    obj_str_t *result = take_str(chars, len);
+    push(OBJ_VAL(result));
 }
 
 static interpret_result_t run()
@@ -109,9 +129,14 @@ static interpret_result_t run()
             case OP_LESS:
                 BINARY_OP(BOOL_VAL, <);
                 break;
-            case OP_ADD:
-                BINARY_OP(NUM_VAL, +);
+            case OP_ADD: {
+                if (!IS_STR(peek(0)) && !IS_STR(peek(1))) {
+                    BINARY_OP(NUM_VAL, +);
+                } else {
+                    concat();
+                }
                 break;
+            }
             case OP_SUBTRACT:
                 BINARY_OP(NUM_VAL, -);
                 break;

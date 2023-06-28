@@ -26,7 +26,8 @@ struct obj_str_t {
     char *chars;
 };
 
-obj_str_t *copy_str(const char * chars, int length);
+obj_str_t *take_str(char *chars, int len);
+obj_str_t *copy_str(const char * chars, int len);
 void print_obj(value_t value);
 
 /// @brief Tells when is safe to cast a value to a specific object type.

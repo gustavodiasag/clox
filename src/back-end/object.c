@@ -34,6 +34,11 @@ static obj_str_t *allocate_str(char *chars, int len)
     return str;
 }
 
+obj_str_t *take_str(char *chars, int len)
+{
+    return allocate_str(chars, len);
+}
+
 /// @brief Consumes the string literal, properly allocating it on the heap.
 /// @param chars string constant
 /// @param len string length
