@@ -11,11 +11,17 @@
 
 // Gets the size of the array's element type and casts the
 // resulting void pointer back to the right type.
-#define GROW_ARRAY(type, pointer, old_count, new_count)     \
-    (type *)reallocate(pointer, sizeof(type) * old_count,   \
+#define GROW_ARRAY(type, ptr, old_count, new_count)     \
+    (type *)reallocate(ptr, sizeof(type) * old_count,   \
         sizeof(type) * new_count)
 
-#define FREE_ARRAY(type, pointer, old_count) \
-    reallocate(pointer, sizeof(type) * old_count, 0)
+// Wrapper around `reallocate()` that resizes an allocation
+// down to zero bytes.
+#define FREE(type, ptr) \
+    reallocate(ptr, sizeof(type), 0)
+
+#define FREE_ARRAY(type, ptr, old_count) \
+    reallocate(ptr, sizeof(type) * old_count, 0)
 
 void *reallocate(void *pointer, size_t old_size, size_t new_size);
+void free_objs();
