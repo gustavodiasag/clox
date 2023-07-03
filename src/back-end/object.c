@@ -30,14 +30,32 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
 /// @brief Creates a new string object and initializes its fields.
 /// @param chars string content
 /// @param len string length
+/// @param hash string's hash code
 /// @return pointer to the resulting string object
-static obj_str_t *allocate_str(char *chars, int len)
+static obj_str_t *allocate_str(char *chars, int len, uint32_t hash)
 {
     obj_str_t *str = ALLOCATE_STR(len);
+    str->hash = hash;
     str->length = len;
     memcpy(str->chars, chars, len);
     
     return str;
+}
+
+/// @brief Short version of the FNV-1a hashing algorithm.
+/// @param key sring to be hashed
+/// @param len string length
+/// @return hash value for that specific key
+static uint32_t hash_str(const char *key, int len)
+{
+    uint32_t hash = 2166136261u;
+
+    for (int i = 0; i < len; i++) {
+        hash ^= (uint8_t)key[i];
+        hash *= 16777619;
+    }
+
+    return hash;
 }
 
 /// @brief 
@@ -46,7 +64,9 @@ static obj_str_t *allocate_str(char *chars, int len)
 /// @return 
 obj_str_t *take_str(char *chars, int len)
 {
-    return allocate_str(chars, len);
+    uint32_t hash = hash_str(chars, len);
+
+    return allocate_str(chars, len, hash);
 }
 
 /// @brief Consumes the string literal, properly allocating it on the heap.
@@ -55,12 +75,13 @@ obj_str_t *take_str(char *chars, int len)
 /// @return pointer to the object generated from that string
 obj_str_t *copy_str(const char *chars, int len)
 {
+    uint32_t hash = hash_str(chars, len);
     char *heap_chars = ALLOCATE(char, len + 1);
     memcpy(heap_chars, chars, len);
 
     heap_chars[len] = '\0';
 
-    return allocate_str(heap_chars, len);
+    return allocate_str(heap_chars, len, hash);
 }
 
 /// @brief Prints a value representing an object.

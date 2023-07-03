@@ -18,7 +18,6 @@ typedef enum {
 struct obj_t{
     // Identifies what kind of object it is.
     obj_type_t type;
-    // Used to track heap allocations.
     struct obj_t *next;
 };
 
@@ -26,8 +25,10 @@ struct obj_str_t {
     obj_t obj;
     // Used to avoid traversing the string.
     int length;
-    // Flexible array member, used to store the object and its
-    // character array in a single contiguous allocation
+    // Each string object stores a hash code for its content.
+    uint32_t hash;
+    // Flexible array member, stores the object and its
+    // character array in a single contiguous allocation.
     char chars[];
 };
 

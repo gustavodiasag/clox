@@ -11,7 +11,7 @@ typedef struct {
     uint8_t *ip;
     value_t stack[STACK_MAX]; 
     value_t *stack_top;
-    // Linked list that stores every object allocated.
+    // Linked list keeping track of every heap-allocated object.
     obj_t *objects;
 } vm_t;
 
