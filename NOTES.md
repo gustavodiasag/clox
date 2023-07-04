@@ -55,11 +55,13 @@ While allocating memory for a structure, the C compiler may adjust the amount of
 
 - **Separate chaining**: instead of each bucket containing a single entry, it stores a collection of them.
 
+- **Open adressing**: technique that handles collisions internally, all entries live direcly in the table.
+
 - **Clustering**: overflow of buckets right next to each other due to similar key values.
 
-- **Open adressing**: technique that handles collisions internally, all entries live direcly in the table.
-    - **Probing**: process of finding an available bucket.
-    - **Probe sequence**: the order that the buckets are examined.
+- **Probing**: process of finding an available bucket.
+
+- **Probe sequence**: the order that the buckets are examined.
 
 # Tombstones
 
