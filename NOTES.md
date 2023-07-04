@@ -60,3 +60,7 @@ While allocating memory for a structure, the C compiler may adjust the amount of
 - **Open adressing**: technique that handles collisions internally, all entries live direcly in the table.
     - **Probing**: process of finding an available bucket.
     - **Probe sequence**: the order that the buckets are examined.
+
+# Tombstones
+
+While deleting items from a hash table that uses open addressing to handle collisions, it may occur that the bucket with a key being deleted is part of one or more implicit probe sequences. Considering that a probe sequence reaches its end when an entry is empty, simply clearing it leaves trailing entries unreachable. To solve this, **tombstones** are used for deletion, so instead of clearing an entry, it is replaced by a sentinel. This way, if a tombstone is found while following a probe sequence during lookup, the process isn't stopped. Tombstones are also used during insertion so that the number of unused entries in the table's bucket array does not waste unnecessary space.
