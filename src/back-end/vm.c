@@ -173,11 +173,13 @@ void init_vm()
 {
     reset_stack();
     vm.objects = NULL;
+    init_table(&vm.strings);
 }
 
 /// @brief Frees all objects once the program is done executing.
 void free_vm()
 {
+    free_table(&vm.strings);
     free_objs();
 }
 

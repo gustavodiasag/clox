@@ -1,6 +1,7 @@
 #pragma once
 
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 #define STACK_MAX 256
@@ -11,6 +12,8 @@ typedef struct {
     uint8_t *ip;
     value_t stack[STACK_MAX]; 
     value_t *stack_top;
+    // Stores all strings created in the program.
+    table_t strings;
     // Linked list keeping track of every heap-allocated object.
     obj_t *objects;
 } vm_t;

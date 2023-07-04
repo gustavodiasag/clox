@@ -64,15 +64,9 @@ bool values_equal(value_t a, value_t b)
             return true;
         case VAL_NUM:
             return AS_NUM(a) == AS_NUM(b);
+        case VAL_OBJ:
+            return AS_OBJ(a) == AS_OBJ(b);
         default:
-        case VAL_OBJ: {
-            obj_str_t *a_str = AS_STR(a);
-            obj_str_t *b_str = AS_STR(b);
-
-            // FIXME: comparison is more expensive than equality on other types
-            return a_str->length == b_str->length
-                && memcmp(a_str->chars, b_str->chars, a_str->length) == 0;
-        }
             return false;
     }
 }

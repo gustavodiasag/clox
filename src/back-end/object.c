@@ -3,6 +3,7 @@
 
 #include "memory.h"
 #include "back-end/object.h"
+#include "back-end/table.h"
 #include "back-end/value.h"
 #include "back-end/vm.h"
 
@@ -38,12 +39,14 @@ static obj_str_t *allocate_str(char *chars, int len, uint32_t hash)
     str->hash = hash;
     str->length = len;
     memcpy(str->chars, chars, len);
+    // Whenever a new string is created, it's added to the virtual machine's table.
+    table_set(&vm.strings, str, NIL_VAL);
     
     return str;
 }
 
 /// @brief Short version of the FNV-1a hashing algorithm.
-/// @param key sring to be hashed
+/// @param key string to be hashed
 /// @param len string length
 /// @return hash value for that specific key
 static uint32_t hash_str(const char *key, int len)
@@ -58,24 +61,38 @@ static uint32_t hash_str(const char *key, int len)
     return hash;
 }
 
-/// @brief 
-/// @param chars 
-/// @param len 
-/// @return 
+/// @brief Takes ownership of the specified string.
+/// @param chars string content
+/// @param len string length
+/// @return pointer to the new objcet containing the string
 obj_str_t *take_str(char *chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
+    obj_str_t *interned = table_find(&vm.strings, chars, len, hash);
+
+    if (interned) {
+        // Duplicate string is no longer needed.
+        FREE_ARRAY(char, chars, len + 1);
+
+        return interned;
+    }
 
     return allocate_str(chars, len, hash);
 }
 
 /// @brief Consumes the string literal, properly allocating it on the heap.
-/// @param chars string constant
+/// @param chars string literal
 /// @param len string length
 /// @return pointer to the object generated from that string
 obj_str_t *copy_str(const char *chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
+
+    obj_str_t *interned = table_find(&vm.strings, chars, len, hash);
+
+    if (interned)
+        return interned;
+
     char *heap_chars = ALLOCATE(char, len + 1);
     memcpy(heap_chars, chars, len);
 
