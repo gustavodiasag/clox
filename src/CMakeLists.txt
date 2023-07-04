@@ -3,6 +3,7 @@ project(clox)
 add_library(source
     back-end/chunk.c
     back-end/object.c
+    back-end/table.c
     back-end/value.c
     back-end/vm.c
     debug.c
