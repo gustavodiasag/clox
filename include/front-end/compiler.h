@@ -36,6 +36,8 @@ typedef struct {
 
 bool compile(const char *source, chunk_t *chunk);
 static void expression();
+static void statement();
+static void declaration();
 static void grouping();
 static void binary();
 static void unary();

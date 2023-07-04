@@ -131,6 +131,19 @@ static void consume(token_type_t type, const char *message)
     error_at_current(message);
 }
 
+/// @brief Consumes the current token if it has the given type.
+/// @param type 
+/// @return whether the token was matched or not
+static bool match(token_type_t type)
+{
+    if (parser.current.type != type)
+        return false;
+
+    advance();
+
+    return true;
+}
+
 /// @brief Writes the specified operational code to the compiling chunk.
 /// @param byte operational code
 static void emit_byte(uint8_t byte)
@@ -192,7 +205,11 @@ bool compile(const char *source, chunk_t *chunk)
     parser.panic = false;
 
     advance();
-    expression();
+    
+    while (!match(TOKEN_EOF)) {
+        declaration();
+    }
+
     consume(TOKEN_EOF, "Expect end of expression");
 
     end_compiler();
@@ -226,6 +243,36 @@ static void parse_precedence(precedence_t precedence)
 static void expression()
 {
     parse_precedence(PREC_ASSIGN);
+}
+
+/// @brief Compiles an expression in a context where a statement is expected.
+static void expr_stmt()
+{
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after expression");
+    emit_byte(OP_POP);
+}
+
+static void print_stmt()
+{
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after value");
+    emit_byte(OP_PRINT);
+}
+
+/// @brief Compiles a single declaration.
+static void declaration()
+{
+    statement();
+}
+
+/// @brief Compiles a single statement.
+static void statement()
+{
+    if (match(TOKEN_PRINT))
+        print_stmt();
+    else
+        expr_stmt();
 }
 
 /// @brief Converts the lexeme to a double value.

@@ -116,6 +116,9 @@ static interpret_result_t run()
             case OP_FALSE:
                 push(BOOL_VAL(false));
                 break;
+            case OP_POP:
+                pop();
+                break;
             case OP_EQUAL: {
                 value_t b = pop();
                 value_t a = pop();
@@ -158,9 +161,13 @@ static interpret_result_t run()
                 push(NUM_VAL(-AS_NUM(pop())));
                 break;
             }
-            case OP_RETURN:
+            case OP_PRINT: {
                 print_value(pop());
                 printf("\n");
+                break;
+            }
+            case OP_RETURN:
+                // Exit interpreter.
                 return INTERPRET_OK;
         }
     }

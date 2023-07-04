@@ -63,6 +63,8 @@ int disassemble_instruction(chunk_t *chunk, int offset)
             return simple_instruction("OP_FALSE", offset);
         case OP_EQUAL:
             return simple_instruction("OP_EQUAL", offset);
+        case OP_POP:
+            return simple_instruction("OP_POP", offset);
         case OP_GREATER:
             return simple_instruction("OP_GREATER", offset);
         case OP_LESS:
@@ -79,6 +81,8 @@ int disassemble_instruction(chunk_t *chunk, int offset)
             return simple_instruction("OP_NOT", offset);
         case OP_NEGATE:
             return simple_instruction("OP_NEGATE", offset);
+        case OP_PRINT:
+            return simple_instruction("OP_PRINT", offset);
         case OP_RETURN:
             return simple_instruction("OP_RETURN", offset);
         default:
