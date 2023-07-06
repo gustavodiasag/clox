@@ -1,0 +1,4 @@
+var a = "bar";
+var b = "foo " + a;
+
+print b;
