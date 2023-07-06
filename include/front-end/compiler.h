@@ -3,7 +3,7 @@
 #include "back-end/object.h"
 #include "scanner.h"
 
-typedef void (*parse_fn_t)();
+typedef void (*parse_fn_t)(bool can_assign);
 
 typedef enum {
     PREC_NONE,
@@ -23,7 +23,9 @@ typedef struct {
     token_t current;
     token_t previous;
     // Records whether any errors ocurred during compilation.
-    bool had_error; 
+    bool had_error;
+    // Used to enter panic mode, responsible for suppressing
+    // cascated compile-time error reporting.
     bool panic;
 } parser_t;
 
@@ -38,9 +40,10 @@ bool compile(const char *source, chunk_t *chunk);
 static void expression();
 static void statement();
 static void declaration();
-static void grouping();
-static void binary();
-static void unary();
-static void number();
-static void literal();
-static void string();
+static void grouping(bool can_assign);
+static void binary(bool can_assign);
+static void unary(bool can_assign);
+static void number(bool can_assign);
+static void literal(bool can_assign);
+static void string(bool can_assign);
+static void variable(bool can_assign);

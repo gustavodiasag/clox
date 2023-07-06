@@ -7,6 +7,7 @@
 #define STACK_MAX 256
 
 typedef struct {
+    // Stores the program bytecode generated after compilation.
     chunk_t *chunk;
     // Keeps track of where the instruction about to be executed is.
     uint8_t *ip;
@@ -14,6 +15,8 @@ typedef struct {
     value_t *stack_top;
     // Stores all strings created in the program.
     table_t strings;
+    // Stores all global variables created in the program.
+    table_t globals;
     // Linked list keeping track of every heap-allocated object.
     obj_t *objects;
 } vm_t;

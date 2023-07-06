@@ -39,7 +39,7 @@ parse_rule_t rules[] = {
     [TOKEN_GREATER_EQUAL]   = {NULL, binary, PREC_COMPARE},
     [TOKEN_LESS]            = {NULL, binary, PREC_COMPARE},
     [TOKEN_LESS_EQUAL]      = {NULL, binary, PREC_COMPARE},
-    [TOKEN_IDENTIFIER]      = {NULL, NULL, PREC_NONE},
+    [TOKEN_IDENTIFIER]      = {variable, NULL, PREC_NONE},
     [TOKEN_STRING]          = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER]          = {number, NULL, PREC_NONE},
     [TOKEN_AND]             = {NULL, NULL, PREC_NONE},
@@ -229,30 +229,83 @@ static void parse_precedence(precedence_t precedence)
         error("Expect expression.");
         return;
     }
+    // Since assignment is the lowest-precedence expression, the only time
+    // an assignment is allowed is when parsing an assignment expresion or
+    // top-level expression like in an expresion statement.
+    bool can_assign = (precedence <= PREC_ASSIGN);
+
     // Compiles the rest of the prefix expression, consuming the necessary tokens.
-    prefix_rule();
+    prefix_rule(can_assign);
 
     while (precedence <= rules[parser.current.type].precedence) {
         advance();
 
         parse_fn_t infix_rule = rules[parser.previous.type].infix;
-        infix_rule();
+        infix_rule(can_assign);
     }
+
+    // If the `=` doesn't get consumed as part of the expression, nothing else
+    // is going to consume it.   
+    if (can_assign && match(TOKEN_EQUAL))
+        error("Invalid assignment target.");
 }
 
+/// @brief Outputs the bytecode for some new global variable.
+/// @param var index of the variable string constant
+static void define_var(uint8_t var)
+{
+    emit_bytes(OP_GLOBAL, var);
+}
+
+/// @brief Adds the given token's lexeme to the chunk's constant table as a string.
+/// @param name variable name
+/// @return position of the string in the constant table 
+static uint8_t identifier_const(token_t *name)
+{
+    return make_constant(OBJ_VAL(copy_str(name->start, name->length)));
+}
+
+/// @brief Parses the current token as a variable identifier.
+/// @param error thrown if the expected token is not found
+/// @return index of the variable in the constant table
+static uint8_t parse_var(const char *error)
+{
+    consume(TOKEN_IDENTIFIER, error);
+
+    return identifier_const(&parser.previous);
+}
+
+/// @brief Parses an expression.
 static void expression()
 {
     parse_precedence(PREC_ASSIGN);
+}
+
+/// @brief Parses a variable declaration, together with its initializing expression.
+static void var_declaration()
+{
+    uint8_t var = parse_var("Expect a variable name.");
+
+    if (match(TOKEN_EQUAL)) {
+        expression();
+    } else {
+        emit_byte(OP_NIL);
+    }
+
+    consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+
+    define_var(var);
 }
 
 /// @brief Compiles an expression in a context where a statement is expected.
 static void expr_stmt()
 {
     expression();
-    consume(TOKEN_SEMICOLON, "Expect ';' after expression");
+    consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
     emit_byte(OP_POP);
 }
 
+/// @brief Compiles a print statement.
 static void print_stmt()
 {
     expression();
@@ -260,13 +313,52 @@ static void print_stmt()
     emit_byte(OP_PRINT);
 }
 
-/// @brief Compiles a single declaration.
-static void declaration()
-{
-    statement();
+/// @brief Minimizes the number of cascated compile errors reported.
+static void syncronize() {
+    parser.panic = false;
+
+    while (parser.current.type != TOKEN_EOF) {
+        // Statement boudaries are used as the point of syncronization.
+        // A boundary is detected either by a token that ends or begins
+        // a statement.
+        if (parser.previous.type == TOKEN_SEMICOLON)
+            return;
+
+        switch (parser.current.type) {
+            case TOKEN_CLASS:
+            case TOKEN_FUN:
+            case TOKEN_VAR:
+            case TOKEN_FOR:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+                return;
+
+            default:
+                ; // Do nothing.
+        }
+
+        advance();
+    }
 }
 
-/// @brief Compiles a single statement.
+/// @brief Parses a single declaration.
+static void declaration()
+{
+    if (match(TOKEN_VAR)) {
+        var_declaration();
+    } else {
+        statement();
+    }
+
+    // If a compile error is detected while parsing the
+    // previous statement, panic mode is entered.
+    if (parser.panic)
+        syncronize();
+}
+
+/// @brief Parses a single statement.
 static void statement()
 {
     if (match(TOKEN_PRINT))
@@ -276,7 +368,8 @@ static void statement()
 }
 
 /// @brief Converts the lexeme to a double value.
-static void number()
+/// @param can_assign whether to consider assigment or not
+static void number(bool can_assign)
 {
     double value = strtod(parser.previous.start, NULL);
 
@@ -284,20 +377,47 @@ static void number()
 }
 
 /// @brief Builds a string object directly from the parsed token's lexeme.
-static void string()
+/// @param can_assign whether to consider assigment or not
+static void string(bool can_assign)
 {
     emit_constant(OBJ_VAL(copy_str(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
-/// @brief Compiles the expression between parenthesis, parsing the closing one.
-static void grouping()
+/// @brief Generates the instruction to load a variable with that name.
+/// @param name variable name
+/// @param can_assign whether to consider assigment or not
+static void named_variable(token_t name, bool can_assign)
+{
+    uint8_t var = identifier_const(&name);
+
+    // If an attribution operator is found, instead of emmiting code for a
+    // variable access, the assigned value is compiled and an assignment
+    // instruction is generated instead.  
+    if (can_assign && match(TOKEN_EQUAL)) {
+        expression();
+        emit_bytes(OP_SET_GLOBAL, var);
+    } else {
+        emit_bytes(OP_GET_GLOBAL, var);
+    }
+}
+
+/// @brief Parses a variable.
+/// @param can_assign whether to consider assigment or not
+static void variable(bool can_assign)
+{
+    named_variable(parser.previous, can_assign);
+}
+
+/// @brief Parses an expression between parenthesis, consuming the closing one.
+static void grouping(bool can_assign)
 {
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-/// @brief Compiles an infix expression.
-static void binary()
+/// @brief Parses an infix expression.
+/// @param can_assign whether to consider assigment or not
+static void binary(bool can_assign)
 {
     token_type_t operator_type = parser.previous.type;
     parse_rule_t *rule = &rules[operator_type];
@@ -343,12 +463,13 @@ static void binary()
     }
 }
 
-/// @brief Compiles a prefix expression.
-static void unary()
+/// @brief Parses a prefix expression.
+/// @param can_assign whether to consider assigment or not
+static void unary(bool can_assign)
 {
     token_type_t operator_type = parser.previous.type;
 
-    parse_precedence(PREC_UNARY); // Compile the operand.
+    parse_precedence(PREC_UNARY); // Parse the operand.
 
     switch (operator_type) { // Emit the operator instruction.
         case TOKEN_BANG:
@@ -362,7 +483,9 @@ static void unary()
     }
 }
 
-static void literal()
+/// @brief Parses a literal expression.
+/// @param can_assign whether to consider assigment or not
+static void literal(bool can_assign)
 {
     switch (parser.previous.type) {
         case TOKEN_FALSE:

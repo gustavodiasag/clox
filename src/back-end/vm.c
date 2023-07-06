@@ -31,7 +31,7 @@ static void runtime_err(const char *format, ...)
 
     size_t instruction = vm.ip - vm.chunk->code - 1;
     int line = vm.chunk->lines[instruction];
-    fprintf(stderr, "[line &d] in script\n", line);
+    fprintf(stderr, "[line %d] in script\n", line);
 
     reset_stack();
 }
@@ -77,6 +77,8 @@ static interpret_result_t run()
 // Reads the next byte from the bytecode, treats the resulting number as an
 // index and looks up the corresponding value in the chunk's constant table.
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+// Returns a string at a specific index in the constant table.
+#define READ_STR() AS_STR(READ_CONSTANT())
 #define BINARY_OP(value_type, op)                       \
     do {                                                \
         if (!IS_NUM(peek(0)) || !IS_NUM(peek(1))) {     \
@@ -119,6 +121,36 @@ static interpret_result_t run()
             case OP_POP:
                 pop();
                 break;
+            case OP_GLOBAL: {
+                obj_str_t *name = READ_STR();
+
+                table_set(&vm.globals, name, peek(0));
+                pop();
+                break;
+            }
+            case OP_SET_GLOBAL: {
+                obj_str_t *name = READ_STR();
+
+                if (table_set(&vm.globals, name, peek(0))) {
+                    table_delete(&vm.globals, name);
+                    runtime_err("Undefined variable '%s'.", name->chars);
+
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
+            case OP_GET_GLOBAL: {
+                obj_str_t *name = READ_STR();
+                value_t value;
+
+                if (!table_get(&vm.globals, name, &value)) {
+                    runtime_err("Undefined variable '%s'.", name->chars);
+
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push(value);
+                break;
+            }
             case OP_EQUAL: {
                 value_t b = pop();
                 value_t a = pop();
@@ -173,6 +205,7 @@ static interpret_result_t run()
     }
 #undef READ_BYTE
 #undef READ_CONSTANT
+#undef RED_STR
 #undef BINARY_OP
 }
 
@@ -180,12 +213,15 @@ void init_vm()
 {
     reset_stack();
     vm.objects = NULL;
+
+    init_table(&vm.globals);
     init_table(&vm.strings);
 }
 
 /// @brief Frees all objects once the program is done executing.
 void free_vm()
 {
+    free_table(&vm.globals);
     free_table(&vm.strings);
     free_objs();
 }
