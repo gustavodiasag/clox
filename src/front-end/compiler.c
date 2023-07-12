@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "back-end/object.h"
 #include "back-end/vm.h"
@@ -216,6 +217,15 @@ static void begin_scope()
 static void end_scope()
 {
     current->scope_depth--;
+
+    // Discards any variable declared at the scope depth that has just ended.
+    while (current->local_count > 0
+        && current->locals[current->local_count - 1].depth > current->scope_depth) {
+        // Local variables occupy slots in the virtual machine's stack, so 
+        // when going out of scope, the correspondent slot should be freed.
+        emit_byte(OP_POP);
+        current->local_count--;
+    }
 }
 
 bool compile(const char *source, chunk_t *chunk)
@@ -278,6 +288,9 @@ static void parse_precedence(precedence_t precedence)
 /// @param var index of the variable string constant
 static void define_var(uint8_t var)
 {
+    if (current->scope_depth > 0)
+        return;
+
     emit_bytes(OP_GLOBAL, var);
 }
 
@@ -289,12 +302,67 @@ static uint8_t identifier_const(token_t *name)
     return make_constant(OBJ_VAL(copy_str(name->start, name->length)));
 }
 
+/// @brief Checks if two identifiers have the same name.
+/// @param a first variable
+/// @param b second variable
+/// @return whether the variables are the same
+static bool identifier_equal(token_t *a, token_t *b)
+{
+    if (a->length != b->length)
+        return false;
+
+    return memcmp(a->start, b->start, a->length) == 0;
+}
+
+/// @brief Initializes a local variable in the compiler's array of variables.
+/// @param name variable name
+static void add_local(token_t name)
+{
+    if (current->local_count == UINT8_COUNT) {
+        error("Too many variables in scope.");
+        return;
+    }
+    
+    local_t *local = &current->locals[current->local_count++];
+    local->name = name;
+    local->depth = current->scope_depth;
+}
+
+/// @brief Records the existence of a local variable.
+static void declare_var()
+{
+    if (current->scope_depth == 0)
+        return;
+
+    token_t *name = &parser.previous;
+
+    // Checks for an existing variable with the same name at the
+    // same scope level.
+    for (int i = current->local_count - 1; i >=0; i--) {
+        local_t *local = &current->locals[i];
+
+        if (local->depth != -1 && local->depth < current->scope_depth)
+            break;
+
+        if (identifier_equal(name, &local->name))
+            error("Already a variable with this name in this scope.");
+    }
+
+    add_local(*name);
+}
+
 /// @brief Parses the current token as a variable identifier.
 /// @param error thrown if the expected token is not found
 /// @return index of the variable in the constant table
 static uint8_t parse_var(const char *error)
 {
     consume(TOKEN_IDENTIFIER, error);
+
+    declare_var();
+
+    // At runtime, local variables aren't looked up by name.  
+    if (current->scope_depth > 0)
+        return 0;
 
     return identifier_const(&parser.previous);
 }
