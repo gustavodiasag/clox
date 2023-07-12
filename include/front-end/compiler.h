@@ -3,6 +3,8 @@
 #include "back-end/object.h"
 #include "scanner.h"
 
+#define UINT8_COUNT (UINT8_MAX + 1)
+
 typedef void (*parse_fn_t)(bool can_assign);
 
 typedef enum {
@@ -18,6 +20,24 @@ typedef enum {
     PREC_CALL,
     PREC_PRIMARY
 } precedence_t;
+
+typedef struct {
+    // Variable name.
+    token_t name;
+    // Records the scope depth of the block where
+    // the local variable was declared.
+    int depth;
+} local_t;
+
+typedef struct {
+    // Locals that are in scope during each point in the
+    // compilation process.
+    local_t locals[UINT8_COUNT];
+    // Tracks how many locals are in scope. 
+    int local_count;
+    // Number of blocks surrounding the code being compiled.
+    int scope_depth;
+} compiler_t;
 
 typedef struct {
     token_t current;

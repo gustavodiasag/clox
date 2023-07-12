@@ -12,6 +12,7 @@
 #endif
 
 parser_t parser;
+compiler_t *current = NULL;
 
 // Stores all the bytecode generated during compilation.
 chunk_t *compiling_chunk;
@@ -187,6 +188,15 @@ static void emit_constant(value_t value)
     emit_bytes(OP_CONSTANT, make_constant(value));
 }
 
+/// @brief Initializes the compiler with the global scope.
+/// @param compiler 
+static void init_compiler(compiler_t *compiler)
+{
+    compiler->local_count = 0;
+    compiler->scope_depth = 0;
+    current = compiler;
+}
+
 static void end_compiler()
 {
     emit_return();
@@ -196,9 +206,24 @@ static void end_compiler()
 #endif
 }
 
+/// @brief Creates a new level of depth for the next scope.
+static void begin_scope()
+{
+    current->scope_depth++;
+}
+
+/// @brief Decreases the level of depth after a block is closed.
+static void end_scope()
+{
+    current->scope_depth--;
+}
+
 bool compile(const char *source, chunk_t *chunk)
 {
     init_scanner(source);
+
+    compiler_t compiler;
+    init_compiler(&compiler);
 
     compiling_chunk = chunk;
     parser.had_error = false;
@@ -206,9 +231,8 @@ bool compile(const char *source, chunk_t *chunk)
 
     advance();
     
-    while (!match(TOKEN_EOF)) {
+    while (!match(TOKEN_EOF))
         declaration();
-    }
 
     consume(TOKEN_EOF, "Expect end of expression");
 
@@ -281,6 +305,15 @@ static void expression()
     parse_precedence(PREC_ASSIGN);
 }
 
+/// @brief Parses declarations and statements nested in a block.
+static void block()
+{
+    while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
+        declaration();
+
+    consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+}
+
 /// @brief Parses a variable declaration, together with its initializing expression.
 static void var_declaration()
 {
@@ -297,7 +330,7 @@ static void var_declaration()
     define_var(var);
 }
 
-/// @brief Compiles an expression in a context where a statement is expected.
+/// @brief Parses an expression in a context where a statement is expected.
 static void expr_stmt()
 {
     expression();
@@ -305,7 +338,7 @@ static void expr_stmt()
     emit_byte(OP_POP);
 }
 
-/// @brief Compiles a print statement.
+/// @brief Parses a print statement.
 static void print_stmt()
 {
     expression();
@@ -361,10 +394,15 @@ static void declaration()
 /// @brief Parses a single statement.
 static void statement()
 {
-    if (match(TOKEN_PRINT))
+    if (match(TOKEN_PRINT)) {
         print_stmt();
-    else
+    } else if (match(TOKEN_LEFT_BRACE)) {
+        begin_scope();
+        block();
+        end_scope();
+    } else {
         expr_stmt();
+    }
 }
 
 /// @brief Converts the lexeme to a double value.
