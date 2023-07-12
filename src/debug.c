@@ -14,7 +14,7 @@ static int constant_instruction(const char *name, chunk_t *chunk, int offset)
     printf("%-16s %4d '", name, constant);
     print_value(chunk->constants.values[constant]);
     printf("'\n");
-    // Constant instructions take two bytes, one for the opcode and one for the operand.
+    // Takes two bytes, one for the opcode and one for the operand.
     return offset + 2;
 }
 
@@ -26,6 +26,19 @@ static int simple_instruction(const char *name, int offset)
 {
     printf("%s\n", name);
     return offset + 1;
+}
+
+/// @brief Prints the stack slot corresponding to that instruction operand.
+/// @param name instruction description
+/// @param chunk 
+/// @param offset used to access the specified instruction
+/// @return the offset of the next instruction
+static int byte_instruction(const char *name, chunk_t *chunk, int offset)
+{
+    uint8_t slot = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, slot);
+
+    return offset + 2;
 }
 
 /// @brief Prints all the instructions in a chunk.
@@ -65,6 +78,10 @@ int disassemble_instruction(chunk_t *chunk, int offset)
             return simple_instruction("OP_EQUAL", offset);
         case OP_POP:
             return simple_instruction("OP_POP", offset);
+        case OP_GET_LOCAL:
+            return byte_instruction("OP_GET_LOCAL", chunk, offset);
+        case OP_SET_LOCAL:
+            return byte_instruction("OP_SET_LOCAL", chunk, offset);
         case OP_GLOBAL:
             return constant_instruction("OP_GLOBAL", chunk, offset);
         case OP_SET_GLOBAL:

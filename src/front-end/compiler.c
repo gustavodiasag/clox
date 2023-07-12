@@ -284,12 +284,14 @@ static void parse_precedence(precedence_t precedence)
         error("Invalid assignment target.");
 }
 
-/// @brief Outputs the bytecode for some new global variable.
+/// @brief Outputs the bytecode for some new variable.
 /// @param var index of the variable string constant
 static void define_var(uint8_t var)
 {
-    if (current->scope_depth > 0)
+    if (current->scope_depth > 0) {
+        mark_initialized();
         return;
+    }
 
     emit_bytes(OP_GLOBAL, var);
 }
@@ -314,6 +316,31 @@ static bool identifier_equal(token_t *a, token_t *b)
     return memcmp(a->start, b->start, a->length) == 0;
 }
 
+/// @brief Searches for the given variable in the compiler's local array.
+/// @param compiler 
+/// @param name variable name
+/// @return index of the given local variable
+static int resolve_local(compiler_t *compiler, token_t *name)
+{
+    // The locals array is traversed backwards so that the last
+    // declared variable with the expected identifier is found,
+    // ensuring that inner variables correcly shadow the ones
+    // with the same name in surrounding scopes.
+    for (int i = compiler->local_count - 1; i >= 0; i--) {
+        local_t *local = &compiler->locals[i];
+
+        if (identifier_equal(name, &local->name)) {
+            if (local->depth == -1)
+                error("Can't read variable in its own initializer");
+                
+            return i;
+        }
+
+    }
+    // Flag representing that the given variable is not a local. 
+    return -1;
+}
+
 /// @brief Initializes a local variable in the compiler's array of variables.
 /// @param name variable name
 static void add_local(token_t name)
@@ -325,7 +352,7 @@ static void add_local(token_t name)
     
     local_t *local = &current->locals[current->local_count++];
     local->name = name;
-    local->depth = current->scope_depth;
+    local->depth = -1;
 }
 
 /// @brief Records the existence of a local variable.
@@ -365,6 +392,12 @@ static uint8_t parse_var(const char *error)
         return 0;
 
     return identifier_const(&parser.previous);
+}
+
+/// @brief Marks that the latest declared variable contains a value.
+static void mark_initialized()
+{
+    current->locals[current->local_count - 1].depth = current->scope_depth;
 }
 
 /// @brief Parses an expression.
@@ -494,16 +527,26 @@ static void string(bool can_assign)
 /// @param can_assign whether to consider assigment or not
 static void named_variable(token_t name, bool can_assign)
 {
-    uint8_t var = identifier_const(&name);
+    uint8_t get_op, set_op;
+    int var = resolve_local(current, &name);
+
+    if (var != -1) {
+        get_op = OP_GET_LOCAL;
+        set_op = OP_SET_LOCAL;
+    } else {
+        var = identifier_const(&name);
+        get_op = OP_GET_GLOBAL;
+        set_op = OP_SET_GLOBAL;
+    }
 
     // If an attribution operator is found, instead of emmiting code for a
     // variable access, the assigned value is compiled and an assignment
     // instruction is generated instead.  
     if (can_assign && match(TOKEN_EQUAL)) {
         expression();
-        emit_bytes(OP_SET_GLOBAL, var);
+        emit_bytes(set_op, (uint8_t)var);
     } else {
-        emit_bytes(OP_GET_GLOBAL, var);
+        emit_bytes(get_op, (uint8_t)var);
     }
 }
 

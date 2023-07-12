@@ -122,6 +122,16 @@ static interpret_result_t run()
             case OP_POP:
                 pop();
                 break;
+            case OP_GET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                push(vm.stack[slot]);
+                break;
+            }
+            case OP_SET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                vm.stack[slot] = peek(0);
+                break;
+            }
             case OP_GLOBAL: {
                 obj_str_t *name = READ_STR();
 
