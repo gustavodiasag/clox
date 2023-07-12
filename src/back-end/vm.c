@@ -79,6 +79,7 @@ static interpret_result_t run()
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 // Returns a string at a specific index in the constant table.
 #define READ_STR() AS_STR(READ_CONSTANT())
+// Executes numerical infix operations, pushing the result into the stack.
 #define BINARY_OP(value_type, op)                       \
     do {                                                \
         if (!IS_NUM(peek(0)) || !IS_NUM(peek(1))) {     \
