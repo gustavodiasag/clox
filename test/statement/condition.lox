@@ -1,0 +1,5 @@
+var x = 22;
+var y = 21;
+
+if (x > y)
+    print "x is greater than y";
