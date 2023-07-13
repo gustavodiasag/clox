@@ -73,7 +73,9 @@ static interpret_result_t run()
 {
 // Reads the byte currently pointed at and advances the instruction pointer.
 #define READ_BYTE() (*vm.ip++)
-
+//Reads the next two bytes from the chunk, building a 16-bit unsigned integer.
+#define READ_SHORT() \
+    (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
 // Reads the next byte from the bytecode, treats the resulting number as an
 // index and looks up the corresponding value in the chunk's constant table.
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
@@ -209,12 +211,21 @@ static interpret_result_t run()
                 printf("\n");
                 break;
             }
+            case OP_JUMP_FALSE: {
+                uint16_t offset = READ_SHORT();
+
+                if (is_falsey(peek(0)))
+                    vm.ip += offset;
+                    
+                break;
+            }
             case OP_RETURN:
                 // Exit interpreter.
                 return INTERPRET_OK;
         }
     }
 #undef READ_BYTE
+#undef READ_SHORT
 #undef READ_CONSTANT
 #undef RED_STR
 #undef BINARY_OP

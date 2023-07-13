@@ -134,7 +134,7 @@ static void consume(token_type_t type, const char *message)
 }
 
 /// @brief Consumes the current token if it has the given type.
-/// @param type 
+/// @param type token type
 /// @return whether the token was matched or not
 static bool match(token_type_t type)
 {
@@ -162,6 +162,17 @@ static void emit_bytes(uint8_t byte_1, uint8_t byte_2)
     emit_byte(byte_2);
 }
 
+/// @brief Emits the jump instruction and a placeholder for the offset.
+/// @param instruction jump instruction
+/// @return offset of the emitted instruction in the chunk
+static int emit_jump(uint8_t instruction) {
+    emit_byte(instruction);
+    // Two bytes are used for the jump offset operand
+    emit_bytes(0xff, 0xff);
+
+    return current_chunk()->count - 2;
+}
+
 static void emit_return()
 {
     emit_byte(OP_RETURN);
@@ -187,6 +198,19 @@ static uint8_t make_constant(value_t value)
 static void emit_constant(value_t value)
 {
     emit_bytes(OP_CONSTANT, make_constant(value));
+}
+
+/// @brief Replaces the operand at the given location with the jump offset. 
+/// @param offset jump offset
+static void patch_jump(int offset)
+{
+    int jump = current_chunk()->count - offset - 2;
+
+    if (jump > UINT16_MAX)
+        error("Too much code to jump over.");
+
+    current_chunk()->code[offset] = (jump >> 8) & 0xff;
+    current_chunk()->code[offset + 1] = jump & 0xff;
 }
 
 /// @brief Initializes the compiler with the global scope.
@@ -263,7 +287,7 @@ static void parse_precedence(precedence_t precedence)
         error("Expect expression.");
         return;
     }
-    // Since assignment is the lowest-precedence expression, the only time
+    // Since assignment is the lowest precedence expression, the only time
     // an assignment is allowed is when parsing an assignment expresion or
     // top-level expression like in an expresion statement.
     bool can_assign = (precedence <= PREC_ASSIGN);
@@ -282,6 +306,12 @@ static void parse_precedence(precedence_t precedence)
     // is going to consume it.   
     if (can_assign && match(TOKEN_EQUAL))
         error("Invalid assignment target.");
+}
+
+/// @brief Marks that the latest declared variable contains a value.
+static void mark_initialized()
+{
+    current->locals[current->local_count - 1].depth = current->scope_depth;
 }
 
 /// @brief Outputs the bytecode for some new variable.
@@ -332,7 +362,7 @@ static int resolve_local(compiler_t *compiler, token_t *name)
         if (identifier_equal(name, &local->name)) {
             if (local->depth == -1)
                 error("Can't read variable in its own initializer");
-                
+
             return i;
         }
 
@@ -394,12 +424,6 @@ static uint8_t parse_var(const char *error)
     return identifier_const(&parser.previous);
 }
 
-/// @brief Marks that the latest declared variable contains a value.
-static void mark_initialized()
-{
-    current->locals[current->local_count - 1].depth = current->scope_depth;
-}
-
 /// @brief Parses an expression.
 static void expression()
 {
@@ -409,7 +433,7 @@ static void expression()
 /// @brief Parses declarations and statements nested in a block.
 static void block()
 {
-    while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
+    while (parser.current.type != TOKEN_RIGHT_BRACE && parser.current.type != TOKEN_EOF)
         declaration();
 
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
@@ -437,6 +461,22 @@ static void expr_stmt()
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
     emit_byte(OP_POP);
+}
+
+/// @brief Parses a conditional statement.
+static void if_stmt() {
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after statement.");
+    // At runtime, the condition value for the if statement
+    // will be located at the top of the stack.
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    // The instruction has an operand for how much to offset the
+    // instruction pointer if the expression is false.
+    int jump = emit_jump(OP_JUMP_FALSE);
+    statement();
+
+    patch_jump(jump);
 }
 
 /// @brief Parses a print statement.
@@ -468,7 +508,6 @@ static void syncronize() {
             case TOKEN_PRINT:
             case TOKEN_RETURN:
                 return;
-
             default:
                 ; // Do nothing.
         }
@@ -497,6 +536,8 @@ static void statement()
 {
     if (match(TOKEN_PRINT)) {
         print_stmt();
+    } else if (match(TOKEN_IF)) {
+        if_stmt();
     } else if (match(TOKEN_LEFT_BRACE)) {
         begin_scope();
         block();

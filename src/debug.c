@@ -30,7 +30,7 @@ static int simple_instruction(const char *name, int offset)
 
 /// @brief Prints the stack slot corresponding to that instruction operand.
 /// @param name instruction description
-/// @param chunk 
+/// @param chunk contains the instructions to be checked
 /// @param offset used to access the specified instruction
 /// @return the offset of the next instruction
 static int byte_instruction(const char *name, chunk_t *chunk, int offset)
