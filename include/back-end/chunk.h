@@ -26,6 +26,7 @@ typedef enum {
     OP_SET_GLOBAL,
     OP_GET_GLOBAL,
     OP_PRINT,
+    OP_JUMP,
     OP_JUMP_FALSE,
     OP_RETURN
 } op_code_t; // FIXME: Add support for `<=`, `!=` and `>=`.

@@ -41,6 +41,21 @@ static int byte_instruction(const char *name, chunk_t *chunk, int offset)
     return offset + 2;
 }
 
+/// @brief Disassembles an instruction with a 16-bit operand.
+/// @param name instruction description
+/// @param sign 
+/// @param chunk contains the instruction to be checked 
+/// @return the offset od the next instruction
+static int jump_instruction(const char *name, int sign, chunk_t *chunk, int offset)
+{
+    uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
+    jump |= chunk->code[offset + 2];
+
+    printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
+
+    return offset + 3;
+}
+
 /// @brief Prints all the instructions in a chunk.
 /// @param chunk stores the bytecode to be analysed
 void disassemble_chunk(chunk_t *chunk)
@@ -106,6 +121,10 @@ int disassemble_instruction(chunk_t *chunk, int offset)
             return simple_instruction("OP_NEGATE", offset);
         case OP_PRINT:
             return simple_instruction("OP_PRINT", offset);
+        case OP_JUMP:
+            return jump_instruction("OP_JUMP", 1, chunk, offset);
+        case OP_JUMP_FALSE:
+            return jump_instruction("OP_JUMP_FALSE", 1, chunk, offset);
         case OP_RETURN:
             return simple_instruction("OP_RETURN", offset);
         default:

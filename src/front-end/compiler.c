@@ -44,7 +44,7 @@ parse_rule_t rules[] = {
     [TOKEN_IDENTIFIER]      = {variable, NULL, PREC_NONE},
     [TOKEN_STRING]          = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER]          = {number, NULL, PREC_NONE},
-    [TOKEN_AND]             = {NULL, NULL, PREC_NONE},
+    [TOKEN_AND]             = {NULL, and_, PREC_AND},
     [TOKEN_CLASS]           = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE]            = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE]           = {literal, NULL, PREC_NONE},
@@ -52,7 +52,7 @@ parse_rule_t rules[] = {
     [TOKEN_FUN]             = {NULL, NULL, PREC_NONE},
     [TOKEN_IF]              = {NULL, NULL, PREC_NONE},
     [TOKEN_NIL]             = {literal, NULL, PREC_NONE},
-    [TOKEN_OR]              = {NULL, NULL, PREC_NONE},
+    [TOKEN_OR]              = {NULL, or_, PREC_OR},
     [TOKEN_PRINT]           = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN]          = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER]           = {NULL, NULL, PREC_NONE},
@@ -326,6 +326,40 @@ static void define_var(uint8_t var)
     emit_bytes(OP_GLOBAL, var);
 }
 
+/// @brief Parses an and operation using short-circuit.
+/// @param can_assign whether to consider assignment or not
+static void and_(bool can_assign)
+{
+    // At this point, the left-hand side of the expression is sitting at
+    // the top of the stack,  
+    int end_jump = emit_jump(OP_JUMP_FALSE);
+
+    // The pop is reached when the left-hand side evaluates to true.
+    emit_byte(OP_POP);
+    // If the left operand is discarted, the right one becomes
+    // the result of the whole expression.
+    parse_precedence(PREC_AND);
+
+    patch_jump(end_jump);
+}
+
+/// @brief Parses an or operation using short-circuit.
+/// @param can_assign whether to consider assignment or not
+static void or_(bool can_assign)
+{
+    int else_jump = emit_jump(OP_JUMP_FALSE);
+    int end_jump = emit_jump(OP_JUMP);
+
+    // If the left-hand side evaluates to false, it jumps over the
+    // opcode that short-circuits the expression to evaluate the
+    // right operand.
+    patch_jump(else_jump);
+    emit_byte(OP_POP);
+
+    parse_precedence(PREC_OR);
+    patch_jump(end_jump);
+}
+
 /// @brief Adds the given token's lexeme to the chunk's constant table as a string.
 /// @param name variable name
 /// @return position of the string in the constant table 
@@ -474,9 +508,19 @@ static void if_stmt() {
     // The instruction has an operand for how much to offset the
     // instruction pointer if the expression is false.
     int jump = emit_jump(OP_JUMP_FALSE);
+    // The result of the conditional expression must be removed
+    // from the stack after the statement is evaluated.
+    emit_byte(OP_POP);
     statement();
 
     patch_jump(jump);
+
+    int else_jump = emit_jump(OP_JUMP);
+
+    if (match(TOKEN_ELSE))
+        statement();
+    
+    patch_jump(else_jump);
 }
 
 /// @brief Parses a print statement.

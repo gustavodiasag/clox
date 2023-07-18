@@ -67,3 +67,5 @@ static void number(bool can_assign);
 static void literal(bool can_assign);
 static void string(bool can_assign);
 static void variable(bool can_assign);
+static void and_(bool can_assign);
+static void or_(bool can_assign);

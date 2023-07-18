@@ -211,6 +211,11 @@ static interpret_result_t run()
                 printf("\n");
                 break;
             }
+            case OP_JUMP: {
+                uint16_t offset = READ_SHORT();
+                vm.ip += offset;
+                break;
+            }
             case OP_JUMP_FALSE: {
                 uint16_t offset = READ_SHORT();
 
