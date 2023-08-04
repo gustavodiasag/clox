@@ -102,24 +102,24 @@ The correspondent assembly code for a 32-bit architecture explains the usage of 
 
 ```asm
 bar:
-    pushl   %ebp                # save the incoming frame pointer
-    movl    %esp, %ebp          # set the frame pointer to the current top of the stack
-    %subl   $16, %esp           # increase the stack by 16 bytes (stack grows down)
-    movl    %555, -4(%ebp)      # `x = 555` is located at [ebp - 4]
-    movl    12(%ebp), %eax      # 12(%ebp) is [ebp + 12], which is the second parameter
-    movl    8(%ebp), %edx       # 8(%ebp) is [ebp + 8], which is the first parameter
-    addl    %edx, %eax          # add them
-    movl    %eax, -8(%ebp)      # store the result in `y`
+    pushl   %ebp                ; save the incoming frame pointer
+    movl    %esp, %ebp          ; set the frame pointer to the current top of the stack
+    %subl   $16, %esp           ; increase the stack by 16 bytes (stack grows down)
+    movl    %555, -4(%ebp)      ; `x = 555` is located at [ebp - 4]
+    movl    12(%ebp), %eax      ; 12(%ebp) is [ebp + 12], which is the second parameter
+    movl    8(%ebp), %edx       ; 8(%ebp) is [ebp + 8], which is the first parameter
+    addl    %edx, %eax          ; add them
+    movl    %eax, -8(%ebp)      ; store the result in `y`
     leave
     ret
 
 foo:
-    pushl   %ebp                # save the current frame pointer
-    movl    %esp, %bp           # set the frame pointer to the current top of the stack
-    subl    $8, %esp            # increase the stack by 8 bytes (stack grows down)
-    movl    $222, 4(%esp)       # pushes 222 on to the stack
-    movl    $111, (%esp)        # pushes 111 on to the stack
-    call    bar                 # push the instruction pointer on the stack and branch to foo
-    leave                       # done
+    pushl   %ebp                ; save the current frame pointer
+    movl    %esp, %bp           ; set the frame pointer to the current top of the stack
+    subl    $8, %esp            ; increase the stack by 8 bytes (stack grows down)
+    movl    $222, 4(%esp)       ; pushes 222 on to the stack
+    movl    $111, (%esp)        ; pushes 111 on to the stack
+    call    bar                 ; push the instruction pointer on the stack and branch to foo
+    leave                       ; done
     ret
 ```
