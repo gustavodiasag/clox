@@ -66,3 +66,15 @@ While allocating memory for a structure, the C compiler may adjust the amount of
 # Tombstones
 
 While deleting items from a hash table that uses open addressing to handle collisions, it may occur that the bucket with a key being deleted is part of one or more implicit probe sequences. Considering that a probe sequence reaches its end when an entry is empty, simply clearing it leaves trailing entries unreachable. To solve this, **tombstones** are used for deletion, so instead of clearing an entry, it is replaced by a sentinel. This way, if a tombstone is found while following a probe sequence during lookup, the process isn't stopped. Tombstones are also used during insertion so that the number of unused entries in the table's bucket array does not waste unnecessary space.
+
+# First-class functions
+
+A programming language is said to have **first-class functions** when functions in that language are treated like any other variable. For example, in such a language, a function can be passed as an ragument to other functions, can be returned by another function and can be assigned as a value to a variable. An example would be:
+
+```js
+const nums = [1, 2, 3, 4, 5]
+
+const addOne = (n) => n + 1
+
+const added = nums.map(addOne) // [2, 3, 4, 5, 6]
+```
