@@ -81,7 +81,7 @@ const added = nums.map(addOne) // [2, 3, 4, 5, 6]
 
 # Stack frames and frame pointers
  
-Each function has local memory associated with it to hold incoming parameters, local variables and temporary variables. This region of memory is called a stack frame and is allocated on the process's stack. A frame pointer contains the base address of the function's frame. The code to access local variables within a function is generated in terms of offsets to the frame pointer. Consider a simple example:
+Each function has local memory associated with it to hold incoming parameters, local variables and temporary variables. This region of memory is called a stack frame and is allocated on the process' stack. A frame pointer contains the base address of the function's frame. The code to access local variables within a function is generated in terms of offsets to the frame pointer. Consider a simple example:
 
 ```c
 void bar(int a, int b)
@@ -100,7 +100,7 @@ void foo(void)
 
 The correspondent assembly code for a 32-bit architecture explains the usage of such concepts:
 
-```x86asm
+```asm
 bar:
     pushl   %ebp                # save the incoming frame pointer
     movl    %esp, %ebp          # set the frame pointer to the current top of the stack
