@@ -69,7 +69,7 @@ While deleting items from a hash table that uses open addressing to handle colli
 
 # First-class functions
 
-A programming language is said to have **first-class functions** when functions in that language are treated like any other variable. For example, in such a language, a function can be passed as an ragument to other functions, can be returned by another function and can be assigned as a value to a variable. An example would be:
+A programming language is said to have **first-class functions** when functions in that language are treated like any other variable. For example, in such a language, a function can be passed as an argument to other functions, can be returned by another function and can be assigned as a value to a variable. An example would be:
 
 ```js
 const nums = [1, 2, 3, 4, 5]
@@ -77,4 +77,49 @@ const nums = [1, 2, 3, 4, 5]
 const addOne = (n) => n + 1
 
 const added = nums.map(addOne) // [2, 3, 4, 5, 6]
+```
+
+# Stack frames and frame pointers
+ 
+Each function has local memory associated with it to hold incoming parameters, local variables and temporary variables. This region of memory is called a stack frame and is allocated on the process's stack. A frame pointer contains the base address of the function's frame. The code to access local variables within a function is generated in terms of offsets to the frame pointer. Consider a simple example:
+
+```c
+void bar(int a, int b)
+{
+    int x, y;
+
+    x = 555;
+    y = a + b;
+}
+
+void foo(void)
+{
+    bar(111, 222);
+}
+```
+
+The correspondent assembly code for a 32-bit architecture explains the usage of such concepts:
+
+```x86asm
+bar:
+    pushl   %ebp                # save the incoming frame pointer
+    movl    %esp, %ebp          # set the frame pointer to the current top of the stack
+    %subl   $16, %esp           # increase the stack by 16 bytes (stack grows down)
+    movl    %555, -4(%ebp)      # `x = 555` is located at [ebp - 4]
+    movl    12(%ebp), %eax      # 12(%ebp) is [ebp + 12], which is the second parameter
+    movl    8(%ebp), %edx       # 8(%ebp) is [ebp + 8], which is the first parameter
+    addl    %edx, %eax          # add them
+    movl    %eax, -8(%ebp)      # store the result in `y`
+    leave
+    ret
+
+foo:
+    pushl   %ebp                # save the current frame pointer
+    movl    %esp, %bp           # set the frame pointer to the current top of the stack
+    subl    $8, %esp            # increase the stack by 8 bytes (stack grows down)
+    movl    $222, 4(%esp)       # pushes 222 on to the stack
+    movl    $111, (%esp)        # pushes 111 on to the stack
+    call    bar                 # push the instruction pointer on the stack and branch to foo
+    leave                       # done
+    ret
 ```
