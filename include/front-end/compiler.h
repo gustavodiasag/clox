@@ -29,7 +29,17 @@ typedef struct {
     int depth;
 } local_t;
 
+// Used by the compiler to detect whether the code being
+// processed corresponds to the top-level program or the
+// body of a function.
+typedef enum {
+    TYPE_FUNC,
+    TYPE_SCRIPT
+} func_type_t;
+
 typedef struct {
+    obj_func_t *func;
+    func_type_t type;
     // Locals that are in scope during each point in the
     // compilation process.
     local_t locals[UINT8_COUNT];
@@ -56,7 +66,7 @@ typedef struct {
 } parse_rule_t;
 
 
-bool compile(const char *source, chunk_t *chunk);
+obj_func_t *compile(const char *source);
 static void expression();
 static void statement();
 static void declaration();

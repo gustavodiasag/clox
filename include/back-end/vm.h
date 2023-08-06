@@ -1,16 +1,31 @@
 #pragma once
 
 #include "chunk.h"
+#include "object.h"
 #include "table.h"
 #include "value.h"
 
-#define STACK_MAX 256
+#define FRAMES_MAX 64   
+#define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
+
+// Represents a single ongoing function call.
+typedef struct {
+    // Function being called.
+    obj_func_t *func;
+    // Instead of storing the return address in the callee's
+    // frame, the caller stores its own instruction pointer.
+    uint8_t *ip;
+    // Points into the virtual machine's value stack
+    // at the first slot that the function can use.
+    value_t *slots;
+} call_frame_t;
 
 typedef struct {
-    // Stores the program bytecode generated after compilation.
-    chunk_t *chunk;
-    // Keeps track of where the instruction about to be executed is.
-    uint8_t *ip;
+    // Dealing with function calls with stack semantics helps
+    // optimizing memory usage by avoiding heap allocations.
+    call_frame_t frames[FRAMES_MAX];
+    // Stores the current height off the call frame stack.
+    int frame_count;
     value_t stack[STACK_MAX]; 
     value_t *stack_top;
     // Stores all strings created in the program.

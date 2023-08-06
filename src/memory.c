@@ -28,6 +28,13 @@ void *reallocate(void *ptr, size_t old_size, size_t new_size)
 static void free_obj(obj_t *obj)
 {
     switch(obj->type) {
+        case OBJ_FUNC: {
+            obj_func_t *func = (obj_func_t *)obj;
+            free_chunk(&func->chunk);
+
+            FREE(obj_func_t, obj);
+            break;
+        }
         case OBJ_STR: {
             obj_str_t *str = (obj_str_t *)obj;
             

@@ -1,17 +1,21 @@
 #pragma once
 
 #include "common.h"
+#include "chunk.h"
 #include "value.h"
 
 #define OBJ_TYPE(val)   (AS_OBJ(val)->type)
 
+#define IS_FUNC(val)    is_obj_type(val, OBJ_FUNC)
 #define IS_STR(val)     is_obj_type(val, OBJ_STR)
 
+#define AS_FUNC(val)    ((obj_func_t *)AS_OBJ(val))
 #define AS_STR(val)     ((obj_str_t *)AS_OBJ(val))
 #define AS_CSTR(val)    (((obj_str_t *)AS_OBJ(val))->chars)
 
 // All heap-allocated components supported in the language.
 typedef enum {
+    OBJ_FUNC,
     OBJ_STR
 } obj_type_t;
 
@@ -20,6 +24,18 @@ struct obj_t{
     obj_type_t type;
     struct obj_t *next;
 };
+
+// Since functions are first class in Lox, they should be
+// represented as objects.
+typedef struct {
+    obj_t obj;
+    // Stores the number of parameters the function expects.
+    int arity;
+    // Each function contains its own chunk of bytecode.
+    chunk_t chunk;
+    // Function name.   
+    obj_str_t *name;
+} obj_func_t;
 
 struct obj_str_t {
     obj_t obj;
@@ -32,6 +48,7 @@ struct obj_str_t {
     char chars[];
 };
 
+obj_func_t *new_func();
 obj_str_t *take_str(char *chars, int len);
 obj_str_t *copy_str(const char * chars, int len);
 void print_obj(value_t value);

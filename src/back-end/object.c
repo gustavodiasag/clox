@@ -28,6 +28,18 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
     return obj;
 }
 
+/// @brief Creates a new Lox function.
+/// @return pointer to the new function object
+obj_func_t *new_func()
+{
+    obj_func_t *func = ALLOCATE_OBJ(obj_func_t, OBJ_FUNC);
+    func->arity = 0;
+    func->name = NULL;
+    init_chunk(&func->chunk);
+
+    return func;
+}
+
 /// @brief Creates a new string object and initializes its fields.
 /// @param chars string content
 /// @param len string length
@@ -101,11 +113,25 @@ obj_str_t *copy_str(const char *chars, int len)
     return allocate_str(heap_chars, len, hash);
 }
 
+/// @brief Prints the name of the given function object.
+/// @param func function object
+static void print_func(obj_func_t *func)
+{
+    if (!func->name) {
+        printf("<script>");
+        return;
+    }
+    printf("<fn %s>", func->name->chars);
+}
+
 /// @brief Prints a value representing an object.
 /// @param value 
 void print_obj(value_t value)
 {
     switch (OBJ_TYPE(value)) {
+        case OBJ_FUNC:
+            print_func(AS_FUNC(value));
+            break;
         case OBJ_STR:
             printf("%s", AS_CSTR(value));
             break;

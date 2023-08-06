@@ -66,7 +66,7 @@ parse_rule_t rules[] = {
 
 static chunk_t *current_chunk()
 {
-    return compiling_chunk;
+    return &current->func->chunk;
 }
 
 /// @brief Outputs a syntax error occurred at the specified token.
@@ -229,21 +229,33 @@ static void patch_jump(int offset)
 }
 
 /// @brief Initializes the compiler with the global scope.
-/// @param compiler 
-static void init_compiler(compiler_t *compiler)
+/// @param compiler current compiler
+/// @param type top-level scope
+static void init_compiler(compiler_t *compiler, func_type_t type)
 {
+    compiler->func = NULL;
+    compiler->type = type;
     compiler->local_count = 0;
     compiler->scope_depth = 0;
+    compiler->func = new_func();
     current = compiler;
+
+    local_t *local = &current->locals[current->local_count++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.length = 0;
 }
 
-static void end_compiler()
+static obj_func_t *end_compiler()
 {
     emit_return();
+    obj_func_t *func = current->func;
 #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error)
-        disassemble_chunk(current_chunk());
+        disassemble_chunk(current_chunk(), (func->name)
+            ? func->name->chars : "<script>");
 #endif
+    return func;
 }
 
 /// @brief Creates a new level of depth for the next scope.
@@ -267,14 +279,13 @@ static void end_scope()
     }
 }
 
-bool compile(const char *source, chunk_t *chunk)
+obj_func_t *compile(const char *source)
 {
     init_scanner(source);
 
     compiler_t compiler;
-    init_compiler(&compiler);
+    init_compiler(&compiler, TYPE_SCRIPT);
 
-    compiling_chunk = chunk;
     parser.had_error = false;
     parser.panic = false;
 
@@ -283,11 +294,9 @@ bool compile(const char *source, chunk_t *chunk)
     while (!match(TOKEN_EOF))
         declaration();
 
-    consume(TOKEN_EOF, "Expect end of expression");
-
-    end_compiler();
-
-    return !parser.had_error;
+    obj_func_t *func = end_compiler();
+    
+    return (parser.had_error) ? NULL : func;
 }
 
 /// @brief Parses a token considering the level of precedence specified.
