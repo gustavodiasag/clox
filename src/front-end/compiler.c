@@ -233,12 +233,19 @@ static void patch_jump(int offset)
 /// @param type top-level scope
 static void init_compiler(compiler_t *compiler, func_type_t type)
 {
+    compiler->enclosing = current;
     compiler->func = NULL;
     compiler->type = type;
     compiler->local_count = 0;
     compiler->scope_depth = 0;
     compiler->func = new_func();
     current = compiler;
+
+    if (type != TYPE_SCRIPT) {
+        current->func->name =
+            copy_str(parser.previous.start,parser.previous.length);
+
+    }
 
     local_t *local = &current->locals[current->local_count++];
     local->depth = 0;
@@ -255,6 +262,8 @@ static obj_func_t *end_compiler()
         disassemble_chunk(current_chunk(), (func->name)
             ? func->name->chars : "<script>");
 #endif
+    // The current compiler pops itself by restoring the previous one.
+    current = current->enclosing;
     return func;
 }
 
@@ -335,6 +344,9 @@ static void parse_precedence(precedence_t precedence)
 /// @brief Marks that the latest declared variable contains a value.
 static void mark_initialized()
 {
+    if (current->scope_depth == 0)
+        return;
+
     current->locals[current->local_count - 1].depth = current->scope_depth;
 }
 
@@ -495,6 +507,52 @@ static void block()
         declaration();
 
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+}
+
+/// @brief Parses a function with its corresponding parameters and statements.
+/// @param type whether the function is top-level or not
+static void function(func_type_t type)
+{
+    // To handle the compilation of multiple nested functions, a separate compiler
+    // is created for each of them. Initializing a function's compiler sets it to
+    // be the current one, so when compiling the function's body, all of the
+    // emitted bytecode is written to the chunk owned by the new compiler. 
+    compiler_t compiler;
+    init_compiler(&compiler, type);
+    begin_scope();
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+
+    if (parser.previous.type == TOKEN_RIGHT_PAREN) {
+        do {
+            current->func->arity++;
+            if (current->func->arity > UINT8_MAX)
+                error_at_current("Number of parameters exceeded.");
+            // Semantically, a parameter is simply a local variable declared
+            // in the outermost lexical scope of the function body.  
+            uint8_t constant = parse_var("Expect parameter name.");
+
+            define_var(constant);
+        } while (match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
+    consume(TOKEN_LEFT_BRACE, "Expect '{' before function body");
+    block();
+    // Yields the newly compiled function object.
+    obj_func_t *function = end_compiler();
+
+    emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(function)));
+}
+
+/// @brief Stores a function as a newly declared variable (first-class function).
+static void fun_declaration()
+{
+    uint8_t global = parse_var("Expect function name.");
+    mark_initialized();
+
+    function(TYPE_FUNC);
+    define_var(global);
 }
 
 /// @brief Parses a variable declaration, together with its initializing expression.
@@ -663,7 +721,9 @@ static void syncronize() {
 /// @brief Parses a single declaration.
 static void declaration()
 {
-    if (match(TOKEN_VAR)) {
+    if (match(TOKEN_FUN)) {
+        fun_declaration();
+    } else if (match(TOKEN_VAR)) {
         var_declaration();
     } else {
         statement();

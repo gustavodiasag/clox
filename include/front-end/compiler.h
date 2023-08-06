@@ -3,8 +3,6 @@
 #include "back-end/object.h"
 #include "scanner.h"
 
-#define UINT8_COUNT (UINT8_MAX + 1)
-
 typedef void (*parse_fn_t)(bool can_assign);
 
 typedef enum {
@@ -37,10 +35,13 @@ typedef enum {
     TYPE_SCRIPT
 } func_type_t;
 
-typedef struct {
+typedef struct compiler_t {
+    // Linked-list used to provide access to the surrounding
+    // compiler and its bytecode chunk.
+    struct compiler_t *enclosing;
     obj_func_t *func;
     func_type_t type;
-    // Locals that are in scope during each point in the
+    // Locals that are in scope at each point in the
     // compilation process.
     local_t locals[UINT8_COUNT];
     // Tracks how many locals are in scope. 
