@@ -1,0 +1,5 @@
+fun foo() {
+    print "bar";
+}
+
+print foo;
