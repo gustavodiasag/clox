@@ -115,7 +115,7 @@ bar:
 
 foo:
     pushl   %ebp                ; save the current frame pointer
-    movl    %esp, %bp           ; set the frame pointer to the current top of the stack
+    movl    %esp, %ebp          ; set the frame pointer to the current top of the stack
     subl    $8, %esp            ; increase the stack by 8 bytes (stack grows down)
     movl    $222, 4(%esp)       ; pushes 222 on to the stack
     movl    $111, (%esp)        ; pushes 111 on to the stack
@@ -123,3 +123,7 @@ foo:
     leave                       ; done
     ret
 ```
+
+# Return address
+
+In the virtual machine model, a call to a function is simply executed by setting the instruction pointer to point to the first instruction in that function's chunk of operations, but when the function is done, the virtual machine needs to return back to where the function was called from and resume execution at the instruction immediately after the call. So, for each function call, there's a need to keep track where to jump back when the call completes, which is called a **return address**. Additionally, if the language supports recursive functions, there may be multiple addresses for a single function, so this is a property of each **invocation** and not the function itself.
