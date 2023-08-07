@@ -40,6 +40,17 @@ obj_func_t *new_func()
     return func;
 }
 
+/// @brief Creates an object representing a native function.
+/// @param function given native
+/// @return pointer to the allocated function
+obj_native_t *new_native(native_fn_t function)
+{
+    obj_native_t *native = ALLOCATE_OBJ(obj_native_t, OBJ_NATIVE);
+    native->function = function;
+
+    return native;
+}
+
 /// @brief Creates a new string object and initializes its fields.
 /// @param chars string content
 /// @param len string length
@@ -131,6 +142,9 @@ void print_obj(value_t value)
     switch (OBJ_TYPE(value)) {
         case OBJ_FUNC:
             print_func(AS_FUNC(value));
+            break;
+        case OBJ_NATIVE:
+            printf("<native fn>");
             break;
         case OBJ_STR:
             printf("%s", AS_CSTR(value));

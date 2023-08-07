@@ -7,15 +7,18 @@
 #define OBJ_TYPE(val)   (AS_OBJ(val)->type)
 
 #define IS_FUNC(val)    is_obj_type(val, OBJ_FUNC)
+#define IS_NATIVE(val)  is_obj_type(val, OBJ_NATIVE)
 #define IS_STR(val)     is_obj_type(val, OBJ_STR)
 
 #define AS_FUNC(val)    ((obj_func_t *)AS_OBJ(val))
+#define AS_NATIVE(val)  (((obj_native_t *)AS_OBJ(val))->function)
 #define AS_STR(val)     ((obj_str_t *)AS_OBJ(val))
 #define AS_CSTR(val)    (((obj_str_t *)AS_OBJ(val))->chars)
 
 // All heap-allocated components supported in the language.
 typedef enum {
     OBJ_FUNC,
+    OBJ_NATIVE,
     OBJ_STR
 } obj_type_t;
 
@@ -37,6 +40,17 @@ typedef struct {
     obj_str_t *name;
 } obj_func_t;
 
+typedef value_t (*native_fn_t)(int argc, value_t *argv);
+
+// Given that native functions behave in a different way when
+// compared to the language's functions, they are defined as
+// an entirely different object type.
+typedef struct {
+    obj_t obj;
+    // Pointer to the C function that implements the native behavior.
+    native_fn_t function;
+} obj_native_t;
+
 struct obj_str_t {
     obj_t obj;
     // Used to avoid traversing the string.
@@ -49,6 +63,7 @@ struct obj_str_t {
 };
 
 obj_func_t *new_func();
+obj_native_t *new_native(native_fn_t function);
 obj_str_t *take_str(char *chars, int len);
 obj_str_t *copy_str(const char * chars, int len);
 void print_obj(value_t value);

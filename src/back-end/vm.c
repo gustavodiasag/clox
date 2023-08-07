@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 
 #include "back-end/object.h"
 #include "back-end/vm.h"
@@ -10,6 +11,15 @@
 #include "memory.h"
 
 vm_t vm; // FIXME: Should be manipulated through pointers.
+
+/// @brief Defines one of the native functions supported by the language.
+/// @param argc number of arguments 
+/// @param argv pointer to the first argument
+/// @return elapsed time since the program started running. 
+static value_t clock_native(int argc, value_t *argv)
+{
+    return NUM_VAL((double)clock() / CLOCKS_PER_SEC);
+}
 
 static void reset_stack()
 {
@@ -30,13 +40,33 @@ static void runtime_err(const char *format, ...)
     va_end(args);
     fputs("\n", stderr);
 
-    call_frame_t *frame = &vm.frames[vm.frame_count - 1];
-    size_t instruction = frame->ip - frame->func->chunk.code - 1;
-    int line = frame->func->chunk.lines[instruction];    
+    // Stack trace of each function executing when the error occurred.
+    for (int i = vm.frame_count - 1; i >= 0; i--) {
+        call_frame_t *frame = &vm.frames[i];
+        obj_func_t *func = frame->func;
+        size_t instruction = frame->ip - func->chunk.code - 1;
 
-    fprintf(stderr, "[line %d] in script\n", line);
+        fprintf(stderr, "[line %d] in ", func->chunk.lines[instruction]);
+
+        if (func->name == NULL) {
+            fprintf(stderr, "script\n");
+        } else {
+            fprintf(stderr, "%s()\n", func->name->chars);
+        }
+    }
 
     reset_stack();
+}
+
+/// @brief Defines a new native function exposed to the language.
+/// @param name function name
+/// @param function native function
+static void define_native(const char *name, native_fn_t function)
+{
+    push(OBJ_VAL(copy_str(name, (int)strlen(name))));
+    push(OBJ_VAL(new_native(function)));
+    
+    table_set(&vm.globals, AS_STR(vm.stack[0]), vm.stack[1]);
 }
 
 /// @brief Looks at the stack without popping any value stored.
@@ -45,6 +75,66 @@ static void runtime_err(const char *format, ...)
 static value_t peek(int offset)
 {
     return vm.stack_top[-1 - offset];
+}
+
+/// @brief Initializes the next call frame on the stack.
+/// @param func function being called
+/// @param args amount of arguments supported
+/// @return status of successfully initialized frame
+static bool init_frame(obj_func_t *func, int args)
+{
+    // The overlapping stack windows work based on the assumption
+    // that a call passes exactly one argument for each of the
+    // function's parameters, but considering that lox is dinamically
+    // typed, a user could pass too many or too few arguments.
+    if (args != func->arity) {
+        runtime_err("Expected %d arguments but got %d.", func->arity, args);
+        return false;
+    }
+    // Deals with a deep call chain.
+    if (vm.frame_count == FRAMES_MAX) {
+        runtime_err("Stack overflow.");
+        return false;
+    }
+
+    call_frame_t *frame = &vm.frames[vm.frame_count++];
+    
+    frame->func = func;
+    frame->ip = func->chunk.code;
+    // Provides the window into the stack for the new frame,
+    // the arithmetic ensures that the arguments already on
+    // the stack line up with the function's parameters.
+    frame->slots = vm.stack_top - args - 1;
+
+    return true;
+}
+
+/// @brief Executes a function call.
+/// @param callee value containing the function object
+/// @param args amount of arguments supported
+/// @return whether the call was successfully executed or not
+static bool call_value(value_t callee, int args)
+{
+    if (IS_OBJ(callee)) {
+        switch (OBJ_TYPE(callee)) {
+            case OBJ_FUNC:
+                return init_frame(AS_FUNC(callee), args);
+            case OBJ_NATIVE: {
+                native_fn_t native = AS_NATIVE(callee);
+                value_t result = native(args, vm.stack_top - args);
+
+                vm.stack_top -= args + 1;
+                push(result);
+
+                return true;
+            }
+            default:
+                break; // Non-callable object type.
+        }
+    }
+    runtime_err("Only function and classes can be called");
+
+    return false;
 }
 
 /// @brief Checks if the specified value has a false behaviour.
@@ -77,7 +167,7 @@ static interpret_result_t run()
     call_frame_t *frame = &vm.frames[vm.frame_count - 1];
 // Reads the byte currently pointed at and advances the frame's ip.
 #define READ_BYTE() (*frame->ip++)
-//Reads the next two bytes from the chunk, building a 16-bit unsigned integer.
+// Reads the next two bytes from the chunk, building a 16-bit unsigned integer.
 #define READ_SHORT() \
     (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 // Reads the next byte from the bytecode, treats the resulting number as an
@@ -234,9 +324,29 @@ static interpret_result_t run()
                 frame->ip -= offset;
                 break;
             }
-            case OP_RETURN:
-                // Exit interpreter.
-                return INTERPRET_OK;
+            case OP_CALL: {
+                int args = READ_BYTE();
+
+                if (!call_value(peek(args), args))
+                    return INTERPRET_RUNTIME_ERROR;
+
+                frame = &vm.frames[vm.frame_count - 1];
+                break;
+            }
+            case OP_RETURN: {
+                value_t result = pop();
+                vm.frame_count--;
+
+                if (vm.frame_count == 0) {
+                    pop();
+                    return INTERPRET_OK;
+                }
+
+                vm.stack_top = frame->slots;
+                push(result);
+                frame = &vm.frames[vm.frame_count - 1];
+                break;
+            }
         }
     }
 #undef READ_BYTE
@@ -253,6 +363,8 @@ void init_vm()
 
     init_table(&vm.globals);
     init_table(&vm.strings);
+
+    define_native("clock", clock_native);
 }
 
 /// @brief Frees all objects once the program is done executing.
@@ -285,12 +397,7 @@ interpret_result_t interpret(const char *source)
 
     push(OBJ_VAL(func));
 
-    call_frame_t *frame = &vm.frames[vm.frame_count++];
-    frame->func = func;
-    frame->ip = func->chunk.code;
-    frame->slots = vm.stack;
-
-    interpret_result_t result = run();
+    init_frame(func, 0);
 
     return run();
 }

@@ -22,7 +22,7 @@ chunk_t *compiling_chunk;
 // the entry token, an infix expression whose left operand is followed
 // by the entry token and the token's level of precedence.
 parse_rule_t rules[] = {
-    [TOKEN_LEFT_PAREN]      = {grouping, NULL, PREC_NONE},
+    [TOKEN_LEFT_PAREN]      = {grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN]     = {NULL, NULL, PREC_NONE},
     [TOKEN_LEFT_BRACE]      = {NULL, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE]     = {NULL, NULL, PREC_NONE},
@@ -133,6 +133,14 @@ static void consume(token_type_t type, const char *message)
     error_at_current(message);
 }
 
+/// @brief Looks for the given token without consuming it.
+/// @param type which kind of token
+/// @return whether the current token is the same as the given one
+static bool check(token_type_t type)
+{
+    return parser.current.type == type;
+}
+
 /// @brief Consumes the current token if it has the given type.
 /// @param type token type
 /// @return whether the token was matched or not
@@ -190,7 +198,7 @@ static int emit_jump(uint8_t instruction) {
 
 static void emit_return()
 {
-    emit_byte(OP_RETURN);
+    emit_bytes(OP_NIL, OP_RETURN);
 }
 
 /// @brief Adds an entry for the value to the chunk's constant table.
@@ -362,6 +370,29 @@ static void define_var(uint8_t var)
     emit_bytes(OP_GLOBAL, var);
 }
 
+/// @brief Parses the function call arguments related to a specific call.
+/// @return the number of arguments it compiled
+static uint8_t arg_list()
+{
+    uint8_t args = 0;
+    if (!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            // Each argument expression emits code that leaves its value
+            // on the stack in preparation for the call.
+            expression();
+            // Since the amount of arguments is stored in a single byte,
+            // functions can't receive more than 255 parameters.
+            if (args == UINT8_MAX)  
+                error("Number of arguments exceeded.");
+
+            args++;
+        } while (match(TOKEN_COMMA));
+    }
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+
+    return args;
+}
+
 /// @brief Parses an and operation using short-circuit.
 /// @param can_assign whether to consider assignment or not
 static void and_(bool can_assign)
@@ -523,7 +554,7 @@ static void function(func_type_t type)
 
     consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
 
-    if (parser.previous.type == TOKEN_RIGHT_PAREN) {
+    if (!check(TOKEN_RIGHT_PAREN)) {
         do {
             current->func->arity++;
             if (current->func->arity > UINT8_MAX)
@@ -660,8 +691,27 @@ static void if_stmt() {
 static void print_stmt()
 {
     expression();
-    consume(TOKEN_SEMICOLON, "Expect ';' after value");
+    consume(TOKEN_SEMICOLON, "Expect ';' after value.");
     emit_byte(OP_PRINT);
+}
+
+/// @brief Parses a return statement.
+static void return_stmt() {
+    // Having a `return` statement outside of any function is considered
+    // as a compile-time error.
+    if (current->type == TYPE_SCRIPT)
+        error("Can't return from top-level code.");
+
+    // The return value expression is optional, so the parser looks
+    // for a semicolon token to tell if a value was provided. If
+    // there is no return value, the statement implicitly returns nil.
+    if (match(TOKEN_SEMICOLON)) {
+        emit_return();
+    } else {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+        emit_byte(OP_RETURN);
+    }
 }
 
 /// @brief Parses a while statement.
@@ -744,6 +794,8 @@ static void statement()
         for_stmt();
     } else if (match(TOKEN_IF)) {
         if_stmt();
+    } else if (match(TOKEN_RETURN)) {
+        return_stmt();
     } else if (match(TOKEN_WHILE)) {
         while_stmt();
     } else if (match(TOKEN_LEFT_BRACE)) {
@@ -859,6 +911,13 @@ static void binary(bool can_assign)
         default:
             return;
     }
+}
+
+/// @brief Emits the operational code for a function call.
+static void call()
+{
+    uint8_t args = arg_list();
+    emit_bytes(OP_CALL, args);
 }
 
 /// @brief Parses a prefix expression.
