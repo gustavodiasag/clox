@@ -127,3 +127,17 @@ foo:
 # Return address
 
 In the virtual machine model, a call to a function is simply executed by setting the instruction pointer to point to the first instruction in that function's chunk of operations, but when the function is done, the virtual machine needs to return back to where the function was called from and resume execution at the instruction immediately after the call. So, for each function call, there's a need to keep track where to jump back when the call completes, which is called a **return address**. Additionally, if the language supports recursive functions, there may be multiple addresses for a single function, so this is a property of each **invocation** and not the function itself.
+
+# Closure implementation
+
+Closures are typically implemented with a special data structure that contains a pointer to the function code, plus a representation of the function's lexical environment at the time when the closure was created. The referencing environment binds the non-local names to the corresponding variables in the lexical environment at the time the closure is created, additionally extending their lifetime to at least as long as the lifetime of the closure itself. When the closure is entered at a later time, possibly with a different lexical environment, the function is executed with its non-local variables referring to the ones captured by the closure, not the current environment.
+
+```c
+typedef struct {
+    // Pointer to function.
+    func_t *function;
+    // Non-locals binded at creation.
+    value_t **values;
+    int value_count;
+} closure_t;
+```
