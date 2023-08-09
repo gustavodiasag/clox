@@ -1,0 +1,12 @@
+fun make_closure() {
+    var local = "local";
+
+    fun closure() {
+        print local;
+    }
+
+    return closure;
+}
+
+var closure = make_closure();
+closure();
