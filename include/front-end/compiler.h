@@ -27,6 +27,13 @@ typedef struct {
     int depth;
 } local_t;
 
+typedef struct {
+    // Stores which local slot the upvalue is capturing.
+    uint8_t index;
+    // TODO: description.
+    bool is_local;
+} upvalue_t;
+
 // Used by the compiler to detect whether the code being
 // processed corresponds to the top-level program or the
 // body of a function.
@@ -46,6 +53,8 @@ typedef struct compiler_t {
     local_t locals[UINT8_COUNT];
     // Tracks how many locals are in scope. 
     int local_count;
+    // Upvalues looked-up by the function being parsed.
+    upvalue_t upvalues[UINT8_COUNT];
     // Number of blocks surrounding the code being compiled.
     int scope_depth;
 } compiler_t;

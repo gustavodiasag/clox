@@ -43,7 +43,7 @@ static void runtime_err(const char *format, ...)
     // Stack trace of each function executing when the error occurred.
     for (int i = vm.frame_count - 1; i >= 0; i--) {
         call_frame_t *frame = &vm.frames[i];
-        obj_func_t *func = frame->func;
+        obj_func_t *func = frame->closure->function;
         size_t instruction = frame->ip - func->chunk.code - 1;
 
         fprintf(stderr, "[line %d] in ", func->chunk.lines[instruction]);
@@ -78,17 +78,18 @@ static value_t peek(int offset)
 }
 
 /// @brief Initializes the next call frame on the stack.
-/// @param func function being called
+/// @param func closure being called (all functions are closures)
 /// @param args amount of arguments supported
 /// @return status of successfully initialized frame
-static bool init_frame(obj_func_t *func, int args)
+static bool init_frame(obj_closure_t *closure, int args)
 {
     // The overlapping stack windows work based on the assumption
     // that a call passes exactly one argument for each of the
     // function's parameters, but considering that lox is dinamically
     // typed, a user could pass too many or too few arguments.
-    if (args != func->arity) {
-        runtime_err("Expected %d arguments but got %d.", func->arity, args);
+    if (args != closure->function->arity) {
+        runtime_err("Expected %d arguments but got %d.",
+            closure->function->arity, args);
         return false;
     }
     // Deals with a deep call chain.
@@ -99,8 +100,8 @@ static bool init_frame(obj_func_t *func, int args)
 
     call_frame_t *frame = &vm.frames[vm.frame_count++];
     
-    frame->func = func;
-    frame->ip = func->chunk.code;
+    frame->closure = closure;
+    frame->ip = closure->function->chunk.code;
     // Provides the window into the stack for the new frame,
     // the arithmetic ensures that the arguments already on
     // the stack line up with the function's parameters.
@@ -117,8 +118,8 @@ static bool call_value(value_t callee, int args)
 {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
-            case OBJ_FUNC:
-                return init_frame(AS_FUNC(callee), args);
+            case OBJ_CLOSURE:
+                return call(AS_CLOSURE(callee), args);
             case OBJ_NATIVE: {
                 native_fn_t native = AS_NATIVE(callee);
                 value_t result = native(args, vm.stack_top - args);
@@ -172,7 +173,8 @@ static interpret_result_t run()
     (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 // Reads the next byte from the bytecode, treats the resulting number as an
 // index and looks up the corresponding value in the chunk's constant table.
-#define READ_CONSTANT() (frame->func->chunk.constants.values[READ_BYTE()])
+#define READ_CONSTANT() \
+    (frame->closure->function->chunk.constants.values[READ_BYTE()])
 // Returns a string at a specific index in the constant table.
 #define READ_STR() AS_STR(READ_CONSTANT())
 // Executes numerical infix operations, pushing the result into the stack.
@@ -198,8 +200,8 @@ static interpret_result_t run()
         }
         printf("\n");
 
-        disassemble_instruction(&frame->func->chunk,
-            (int)(frame->ip - frame->func->chunk.code));
+        disassemble_instruction(&frame->closure->function->chunk,
+            (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
         uint8_t instruction;
 
@@ -333,6 +335,13 @@ static interpret_result_t run()
                 frame = &vm.frames[vm.frame_count - 1];
                 break;
             }
+            case OP_CLOSURE: {
+                obj_func_t *function = AS_FUNCTION(READ_CONSTANT());
+                obj_closure_t *closure = new_closure(function);
+
+                push(OBJ_VAL(closure));
+                break;
+            }
             case OP_RETURN: {
                 value_t result = pop();
                 vm.frame_count--;
@@ -397,6 +406,10 @@ interpret_result_t interpret(const char *source)
 
     push(OBJ_VAL(func));
 
+    obj_closure_t *closure = new_closure(func);
+
+    pop();
+    push(OBJ_VAL(closure));
     init_frame(func, 0);
 
     return run();

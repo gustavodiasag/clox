@@ -6,10 +6,12 @@
 
 #define OBJ_TYPE(val)   (AS_OBJ(val)->type)
 
+#define IS_CLOSURE(val) is_obj_type(val, OBJ_CLOSURE)
 #define IS_FUNC(val)    is_obj_type(val, OBJ_FUNC)
 #define IS_NATIVE(val)  is_obj_type(val, OBJ_NATIVE)
 #define IS_STR(val)     is_obj_type(val, OBJ_STR)
 
+#define AS_CLOSURE(val) ((obj_closure_t *)AS_OBJ(val))
 #define AS_FUNC(val)    ((obj_func_t *)AS_OBJ(val))
 #define AS_NATIVE(val)  (((obj_native_t *)AS_OBJ(val))->function)
 #define AS_STR(val)     ((obj_str_t *)AS_OBJ(val))
@@ -17,6 +19,7 @@
 
 // All heap-allocated components supported in the language.
 typedef enum {
+    OBJ_CLOSURE,
     OBJ_FUNC,
     OBJ_NATIVE,
     OBJ_STR
@@ -34,6 +37,8 @@ typedef struct {
     obj_t obj;
     // Stores the number of parameters the function expects.
     int arity;
+    // Number of upvalues accessed by the function.
+    int upvalue_count;
     // Each function contains its own chunk of bytecode.
     chunk_t chunk;
     // Function name.   
@@ -62,6 +67,12 @@ struct obj_str_t {
     char chars[];
 };
 
+typedef struct {
+    obj_t obj;
+    obj_func_t *function;
+} obj_closure_t;
+
+obj_closure_t *new_closure(obj_func_t *function);
 obj_func_t *new_func();
 obj_native_t *new_native(native_fn_t function);
 obj_str_t *take_str(char *chars, int len);

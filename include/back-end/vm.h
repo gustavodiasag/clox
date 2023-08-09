@@ -11,7 +11,7 @@
 // Represents a single ongoing function call.
 typedef struct {
     // Function being called.
-    obj_func_t *func;
+    obj_closure_t *closure;
     // Instead of storing the return address in the callee's
     // frame, the caller stores its own instruction pointer.
     uint8_t *ip;

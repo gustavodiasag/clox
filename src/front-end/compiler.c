@@ -472,6 +472,55 @@ static int resolve_local(compiler_t *compiler, token_t *name)
     return -1;
 }
 
+/// @brief Creates an upvalue for a given variable.
+/// @param compiler provides the array of upvalues
+/// @param index variable's table position 
+/// @param is_local whether is local or global
+/// @return index of the created upvalue in the function's upvalue list
+static int add_upvalue(compiler_t *compiler, uint8_t index, bool is_local)
+{
+    int upvalue_count = compiler->func->upvalue_count;
+
+    // A closure may reference the same variable in a surrounding function
+    // multiple times. So, before adding a new upvalue, checking if the
+    // function already has an upvalue that closes over that variable
+    // avoids unnecessary use of memory.
+    for (int i = 0; i < upvalue_count; i++) {
+        upvalue_t *upvalue = &compiler->upvalues[i];
+
+        if (upvalue->index == index && upvalue->is_local == is_local)
+            return i;
+    }
+
+    if (upvalue_count == UINT8_COUNT) {
+        error("Too many closure variables in function.");
+        return 0;
+    }
+
+    compiler->upvalues[upvalue_count].is_local = is_local;
+    compiler->upvalues[upvalue_count].index = index;
+
+    return compiler->func->upvalue_count++;
+}
+
+/// @brief Searches for the variable with the given name in enclosing functions.
+/// @param compiler provides access to the surrounding functions linked-list
+/// @param name variable name
+/// @return variable index in the function's compiler locals table
+static int resolve_upvalue(compiler_t *compiler, token_t *name)
+{
+    // Top-level function contains only global variables.
+    if (!compiler->enclosing)
+        return -1;
+
+    int local = resolve_local(compiler->enclosing, name);
+
+    if (local != -1)
+        return add_upvalue(compiler, (uint8_t)local, true);
+
+    return -1;
+}
+
 /// @brief Initializes a local variable in the compiler's array of variables.
 /// @param name variable name
 static void add_local(token_t name)
@@ -493,7 +542,6 @@ static void declare_var()
         return;
 
     token_t *name = &parser.previous;
-
     // Checks for an existing variable with the same name at the
     // same scope level.
     for (int i = current->local_count - 1; i >=0; i--) {
@@ -573,7 +621,7 @@ static void function(func_type_t type)
     // Yields the newly compiled function object.
     obj_func_t *function = end_compiler();
 
-    emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(function)));
+    emit_bytes(OP_CLOSURE, make_constant(OBJ_VAL(function)));
 }
 
 /// @brief Stores a function as a newly declared variable (first-class function).
@@ -834,6 +882,9 @@ static void named_variable(token_t name, bool can_assign)
     if (var != -1) {
         get_op = OP_GET_LOCAL;
         set_op = OP_SET_LOCAL;
+    } else if (var = resolve_upvalue(current, &name) != -1) {
+        get_op = OP_GET_UPVALUE;
+        set_op = OP_SET_UPVALUE;
     } else {
         var = identifier_const(&name);
         get_op = OP_GET_GLOBAL;

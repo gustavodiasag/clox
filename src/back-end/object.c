@@ -28,13 +28,26 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
     return obj;
 }
 
+/// @brief Creates a new closure object.
+/// @param function 
+/// @return the closure built from the given function
+obj_closure_t *new_closure(obj_func_t *function)
+{
+    obj_closure_t *closure = ALLOCATE_OBJ(obj_closure_t, OBJ_CLOSURE);
+    closure->function = function;
+
+    return closure;
+}
+
 /// @brief Creates a new Lox function.
 /// @return pointer to the new function object
 obj_func_t *new_func()
 {
     obj_func_t *func = ALLOCATE_OBJ(obj_func_t, OBJ_FUNC);
+    func->upvalue_count - 0;
     func->arity = 0;
     func->name = NULL;
+
     init_chunk(&func->chunk);
 
     return func;
@@ -136,10 +149,13 @@ static void print_func(obj_func_t *func)
 }
 
 /// @brief Prints a value representing an object.
-/// @param value 
+/// @param value contains the object type
 void print_obj(value_t value)
 {
     switch (OBJ_TYPE(value)) {
+        case OBJ_CLOSURE:
+            print_func(AS_CLOSURE(value)->function);
+            break;
         case OBJ_FUNC:
             print_func(AS_FUNC(value));
             break;

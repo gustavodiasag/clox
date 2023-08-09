@@ -28,6 +28,13 @@ void *reallocate(void *ptr, size_t old_size, size_t new_size)
 static void free_obj(obj_t *obj)
 {
     switch(obj->type) {
+        // Only the closure object is freed and not the function it
+        // encloses, since the closure doesn't own the function. There
+        // may be multiple closures that reference the same function.
+        case OBJ_CLOSURE: {
+            FREE(obj_closure_t, obj);
+            break;
+        }
         case OBJ_FUNC: {
             obj_func_t *func = (obj_func_t *)obj;
             free_chunk(&func->chunk);
@@ -35,9 +42,10 @@ static void free_obj(obj_t *obj)
             FREE(obj_func_t, obj);
             break;
         }
-        case OBJ_NATIVE:
+        case OBJ_NATIVE: {
             FREE(obj_native_t, obj);
             break;
+        }
         case OBJ_STR: {
             obj_str_t *str = (obj_str_t *)obj;
             
