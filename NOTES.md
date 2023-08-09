@@ -141,3 +141,18 @@ typedef struct {
     int value_count;
 } closure_t;
 ```
+
+# Upvalues
+
+In a language implementation that supports closures, it is important to keep in mind that any variable from an enclosing function might be accessed by a closure at different moments during execution, meaning that the state pictured could be constantly different. To maintain a reference to those variables, the concept of [**upvalues**](https://www.lua.org/pil/27.3.3.html) can be used as a strategy.
+
+The sample code below shows the most basic scenario of upvalues:
+
+```lua
+local a = 1
+local function foo()
+    print(a)
+end
+```
+
+The entire code can be seen as a top-level function, which defines two local variables: `a` and the function `foo`. The reference `a` in `print (a)` inside the `foo()` function refers to a local variable defined outside the function, which is defined as an upvalue. Using this approach, every closure maintains an array of upvalues, one for each surrounding variable that the closure uses.
