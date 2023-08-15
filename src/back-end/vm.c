@@ -119,7 +119,7 @@ static bool call_value(value_t callee, int args)
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
             case OBJ_CLOSURE:
-                return call(AS_CLOSURE(callee), args);
+                return init_frame(AS_CLOSURE(callee), args);
             case OBJ_NATIVE: {
                 native_fn_t native = AS_NATIVE(callee);
                 value_t result = native(args, vm.stack_top - args);
@@ -336,7 +336,7 @@ static interpret_result_t run()
                 break;
             }
             case OP_CLOSURE: {
-                obj_func_t *function = AS_FUNCTION(READ_CONSTANT());
+                obj_func_t *function = AS_FUNC(READ_CONSTANT());
                 obj_closure_t *closure = new_closure(function);
 
                 push(OBJ_VAL(closure));

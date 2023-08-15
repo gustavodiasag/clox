@@ -67,6 +67,10 @@ struct obj_str_t {
     char chars[];
 };
 
+// Wrapper around a function object that represents its declaration
+// at runtime. Functions can have references to variables declared
+// in their bodies and also capture outer-scoped variables, so
+// their behavior is similar to that of a closure.
 typedef struct {
     obj_t obj;
     obj_func_t *function;

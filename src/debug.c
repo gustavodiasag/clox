@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "debug.h"
+#include "back-end/object.h"
 #include "back-end/value.h"
 
 /// @brief Prints the compound structure stored at the given offset.
@@ -106,6 +107,10 @@ int disassemble_instruction(chunk_t *chunk, int offset)
             return constant_instruction("OP_SET_GLOBAL", chunk, offset);
         case OP_GET_GLOBAL:
             return constant_instruction("OP_GET_GLOBAL", chunk, offset);
+        case OP_GET_UPVALUE:
+            return byte_instruction("OP_GET_UPVALUE", chunk, offset);
+        case OP_SET_UPVALUE:
+            return byte_instruction("OP_SET_UPVALUE", chunk, offset);
         case OP_GREATER:
             return simple_instruction("OP_GREATER", offset);
         case OP_LESS:
@@ -139,6 +144,16 @@ int disassemble_instruction(chunk_t *chunk, int offset)
             printf("%-16s %4d", "OP_CLOSURE", constant);
             print_value(chunk->constants.values[constant]);
             printf("\n");
+
+            obj_func_t *function = AS_FUNC(chunk->constants.values[constant]);
+
+            for (int i = 0; i < function->upvalue_count; i++) {
+                int is_local = chunk->code[offset++];
+                int index = chunk->code[offset++];
+
+                printf("%04d      |                     %s %d\n",
+                    offset - 2, is_local ? "local" : "upvalue", index);
+            }
             
             return offset;
         }

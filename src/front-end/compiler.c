@@ -518,6 +518,11 @@ static int resolve_upvalue(compiler_t *compiler, token_t *name)
     if (local != -1)
         return add_upvalue(compiler, (uint8_t)local, true);
 
+    int upvalue = resolve_upvalue(compiler->enclosing, name);
+
+    if (upvalue != -1)
+        return add_upvalue(compiler, (uint8_t)upvalue, false);
+
     return -1;
 }
 
@@ -622,6 +627,19 @@ static void function(func_type_t type)
     obj_func_t *function = end_compiler();
 
     emit_bytes(OP_CLOSURE, make_constant(OBJ_VAL(function)));
+
+    // The `OP_CLOSURE` instruction is unique in that it has a variably sized
+    // encoding. For each upvalue the closure captures, there are two single-
+    // byte operands. Each pair of operands specifies what that upvalue
+    // captures.  
+    for (int i = 0; i < function->upvalue_count; i++) {
+        // If the first byte is one, it captures a local variable in the
+        // enclosing function and if zero, it captures one of the function's
+        // upvalues.
+        emit_byte(compiler.upvalues[i].is_local ? 1 : 0);
+        // The next byte is the local slot or upvalue index to capture.
+        emit_byte(compiler.upvalues[i].index);
+    }
 }
 
 /// @brief Stores a function as a newly declared variable (first-class function).
