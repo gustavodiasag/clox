@@ -104,12 +104,14 @@ static void skip_whitespace()
                 scanner.line++;
                 advance();
                 break;
-            case '/':
+            case '/': {
                 if (peek_next() == '/')
                     while (peek() != '\n' && !is_at_end())
                         advance();
                 else
                     return;
+                break;
+            }
             default:
                 return;
         }
