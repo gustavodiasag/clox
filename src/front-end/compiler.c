@@ -247,12 +247,12 @@ static void init_compiler(compiler_t *compiler, func_type_t type)
     compiler->local_count = 0;
     compiler->scope_depth = 0;
     compiler->func = new_func();
+
     current = compiler;
 
     if (type != TYPE_SCRIPT) {
         current->func->name =
             copy_str(parser.previous.start,parser.previous.length);
-
     }
 
     local_t *local = &current->locals[current->local_count++];
@@ -480,7 +480,6 @@ static int resolve_local(compiler_t *compiler, token_t *name)
 static int add_upvalue(compiler_t *compiler, uint8_t index, bool is_local)
 {
     int upvalue_count = compiler->func->upvalue_count;
-
     // A closure may reference the same variable in a surrounding function
     // multiple times. So, before adding a new upvalue, checking if the
     // function already has an upvalue that closes over that variable
@@ -514,7 +513,7 @@ static int resolve_upvalue(compiler_t *compiler, token_t *name)
         return -1;
 
     int local = resolve_local(compiler->enclosing, name);
-
+    
     if (local != -1)
         return add_upvalue(compiler, (uint8_t)local, true);
 
@@ -570,7 +569,6 @@ static uint8_t parse_var(const char *error)
     consume(TOKEN_IDENTIFIER, error);
 
     declare_var();
-
     // At runtime, local variables aren't looked up by name.  
     if (current->scope_depth > 0)
         return 0;
@@ -900,7 +898,7 @@ static void named_variable(token_t name, bool can_assign)
     if (var != -1) {
         get_op = OP_GET_LOCAL;
         set_op = OP_SET_LOCAL;
-    } else if (var = resolve_upvalue(current, &name) != -1) {
+    } else if ((var = resolve_upvalue(current, &name)) != -1) {
         get_op = OP_GET_UPVALUE;
         set_op = OP_SET_UPVALUE;
     } else {
@@ -983,7 +981,7 @@ static void binary(bool can_assign)
 }
 
 /// @brief Emits the operational code for a function call.
-static void call()
+static void call(bool can_assign)
 {
     uint8_t args = arg_list();
     emit_bytes(OP_CALL, args);

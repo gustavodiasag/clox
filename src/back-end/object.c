@@ -16,7 +16,7 @@
 /// @brief Allocates an object of a given size on the heap.
 /// @param size specified number of bytes for varying extra fields
 /// @param type type of the object being allocated
-/// @return pointer to the allocated object memory
+/// @return pointer to the object created
 static obj_t *allocate_obj(size_t size, obj_type_t type)
 {
     obj_t *obj = (obj_t *)reallocate(NULL, 0, size);
@@ -28,23 +28,40 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
     return obj;
 }
 
+/// @brief Creates a new upvalue object
+/// @param slot stack position of the captured variable
+/// @return pointer to the object created
+obj_upvalue_t *new_upvalue(value_t *slot) {
+    obj_upvalue_t *upvalue = ALLOCATE_OBJ(obj_upvalue_t, OBJ_UPVALUE);
+    upvalue->location = slot;
+
+    return upvalue;
+}
+
 /// @brief Creates a new closure object.
 /// @param function 
-/// @return the closure built from the given function
+/// @return pointer to the object created
 obj_closure_t *new_closure(obj_func_t *function)
 {
+    obj_upvalue_t **upvalues = ALLOCATE(obj_upvalue_t *, function->upvalue_count);
+    
+    for (int i = 0; i < function->upvalue_count; i++)
+        upvalues[i] = NULL;
+
     obj_closure_t *closure = ALLOCATE_OBJ(obj_closure_t, OBJ_CLOSURE);
     closure->function = function;
+    closure->upvalues = upvalues;
+    closure->upvalue_count = function->upvalue_count;
 
     return closure;
 }
 
 /// @brief Creates a new Lox function.
-/// @return pointer to the new function object
+/// @return pointer to the object created
 obj_func_t *new_func()
 {
     obj_func_t *func = ALLOCATE_OBJ(obj_func_t, OBJ_FUNC);
-    func->upvalue_count - 0;
+    func->upvalue_count = 0;
     func->arity = 0;
     func->name = NULL;
 
@@ -55,7 +72,7 @@ obj_func_t *new_func()
 
 /// @brief Creates an object representing a native function.
 /// @param function given native
-/// @return pointer to the allocated function
+/// @return pointer to the object created
 obj_native_t *new_native(native_fn_t function)
 {
     obj_native_t *native = ALLOCATE_OBJ(obj_native_t, OBJ_NATIVE);
@@ -68,7 +85,7 @@ obj_native_t *new_native(native_fn_t function)
 /// @param chars string content
 /// @param len string length
 /// @param hash string's hash code
-/// @return pointer to the resulting string object
+/// @return pointer to the object created
 static obj_str_t *allocate_str(char *chars, int len, uint32_t hash)
 {
     obj_str_t *str = ALLOCATE_STR(len);
@@ -145,7 +162,7 @@ static void print_func(obj_func_t *func)
         printf("<script>");
         return;
     }
-    printf("<fn %s>", func->name->chars);
+    printf(" <fn %s>", func->name->chars);
 }
 
 /// @brief Prints a value representing an object.
@@ -164,6 +181,9 @@ void print_obj(value_t value)
             break;
         case OBJ_STR:
             printf("%s", AS_CSTR(value));
+            break;
+        case OBJ_UPVALUE:
+            printf("upvalue");
             break;
     }
 }

@@ -138,6 +138,16 @@ static bool call_value(value_t callee, int args)
     return false;
 }
 
+/// @brief Closes over a local variable from the surrounding function.
+/// @param local pointer to the captured local's slot
+/// @return pointer to the upvalue object created
+static obj_upvalue_t *capture_upvalue(value_t *local)
+{
+    obj_upvalue_t *upvalue = new_upvalue(local);
+
+    return upvalue;
+}
+
 /// @brief Checks if the specified value has a false behaviour.
 /// @param value 
 /// @return whether the value is true or not
@@ -261,6 +271,21 @@ static interpret_result_t run()
                 push(value);
                 break;
             }
+            case OP_GET_UPVALUE: {
+                // Index into the current function's upvalue array.
+                uint8_t slot = READ_BYTE();
+                // Looks up the correspondent upvalue and dereference
+                // its location pointer to read the value in that slot.
+                push(*frame->closure->upvalues[slot]->location);
+                break;
+            }
+            case OP_SET_UPVALUE: {
+                uint8_t slot = READ_BYTE();
+                // Takes the value at the top of the stack and store it
+                // into the slot pointed to by the chosen upvalue.
+                *frame->closure->upvalues[slot]->location = peek(0);
+                break;
+            }
             case OP_EQUAL: {
                 value_t b = pop();
                 value_t a = pop();
@@ -340,6 +365,25 @@ static interpret_result_t run()
                 obj_closure_t *closure = new_closure(function);
 
                 push(OBJ_VAL(closure));
+                for (int i = 0; i < closure->upvalue_count; i++) {
+                    uint8_t is_local = READ_BYTE();
+                    uint8_t index = READ_BYTE();
+
+                    if (is_local) {
+                        // Here, `capture_value` takes a pointer to the local's slot
+                        // in the surrounding function's stack window. That window
+                        // begins at `frame->slots` which points to slot zero.
+                        // Adding `index` offsets that to the right slot.
+                        closure->upvalues[i] = capture_upvalue(frame->slots + index);
+                    } else {
+                        // At the moment a function's declaration is being executed,
+                        // the current function is the surrounding one. So, the
+                        // upvalue from the enclosing function is directly read from
+                        // `frame`. 
+                        closure->upvalues[i] = frame->closure->upvalues[index];
+                    }
+                }
+
                 break;
             }
             case OP_RETURN: {
@@ -410,7 +454,7 @@ interpret_result_t interpret(const char *source)
 
     pop();
     push(OBJ_VAL(closure));
-    init_frame(func, 0);
+    init_frame(closure, 0);
 
     return run();
 }

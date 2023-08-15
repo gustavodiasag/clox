@@ -32,6 +32,8 @@ static void free_obj(obj_t *obj)
         // encloses, since the closure doesn't own the function. There
         // may be multiple closures that reference the same function.
         case OBJ_CLOSURE: {
+            obj_closure_t *closure = (obj_closure_t *)obj;
+            FREE_ARRAY(obj_upvalue_t *, closure->upvalues, closure->upvalue_count);
             FREE(obj_closure_t, obj);
             break;
         }
@@ -51,6 +53,12 @@ static void free_obj(obj_t *obj)
             
             FREE(obj_str_t, obj);
             break;
+        }
+        // Multiple closures can close over the same variable, so
+        // `obj_upvalue_t` doesn't own the variable it references.
+        case OBJ_UPVALUE: {
+            FREE(obj_upvalue_t, obj);
+            break; 
         }
     }
 }

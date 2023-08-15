@@ -22,7 +22,8 @@ typedef enum {
     OBJ_CLOSURE,
     OBJ_FUNC,
     OBJ_NATIVE,
-    OBJ_STR
+    OBJ_STR,
+    OBJ_UPVALUE
 } obj_type_t;
 
 struct obj_t{
@@ -67,6 +68,13 @@ struct obj_str_t {
     char chars[];
 };
 
+// Runtime representation of upvalues.
+typedef struct obj_upvalue_t {
+    obj_t obj;
+    // Pointer to a closed-over variable.
+    value_t *location;
+} obj_upvalue_t;
+
 // Wrapper around a function object that represents its declaration
 // at runtime. Functions can have references to variables declared
 // in their bodies and also capture outer-scoped variables, so
@@ -74,8 +82,14 @@ struct obj_str_t {
 typedef struct {
     obj_t obj;
     obj_func_t *function;
+    // Pointer to a dynamically allocated array of pointers to
+    // upvalues.
+    obj_upvalue_t **upvalues;
+    // Number of elements in the upvalue array.
+    int upvalue_count;
 } obj_closure_t;
 
+obj_upvalue_t *new_upvalue(value_t *slot);
 obj_closure_t *new_closure(obj_func_t *function);
 obj_func_t *new_func();
 obj_native_t *new_native(native_fn_t function);
