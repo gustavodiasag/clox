@@ -33,7 +33,9 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
 /// @return pointer to the object created
 obj_upvalue_t *new_upvalue(value_t *slot) {
     obj_upvalue_t *upvalue = ALLOCATE_OBJ(obj_upvalue_t, OBJ_UPVALUE);
+    upvalue->closed = NIL_VAL;
     upvalue->location = slot;
+    upvalue->next = NULL;
 
     return upvalue;
 }

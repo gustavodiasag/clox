@@ -25,6 +25,7 @@ static void reset_stack()
 {
     vm.stack_top = vm.stack;
     vm.frame_count = 0;
+    vm.open_upvalues = NULL;
 }
 
 /// @brief Variadic function for runtime error reporting.
@@ -143,9 +144,40 @@ static bool call_value(value_t callee, int args)
 /// @return pointer to the upvalue object created
 static obj_upvalue_t *capture_upvalue(value_t *local)
 {
+    obj_upvalue_t *prev_upvalue = NULL;
+    obj_upvalue_t *curr_upvalue = vm.open_upvalues;
+
+    while (curr_upvalue && curr_upvalue->location > local) {
+        prev_upvalue = curr_upvalue;
+        curr_upvalue = curr_upvalue->next;
+    }
+
+    if (curr_upvalue && curr_upvalue->location == local)
+        return curr_upvalue;
+
     obj_upvalue_t *upvalue = new_upvalue(local);
+    upvalue->next = curr_upvalue;
+
+    if (!prev_upvalue) {
+        vm.open_upvalues = upvalue;
+    } else {
+        prev_upvalue->next = upvalue;
+    }
 
     return upvalue;
+}
+
+/// @brief Closes every open upvalue pointing to the given slot.
+/// @param last pointer to a stack slot
+static void close_upvalues(value_t *last) 
+{
+    while (vm.open_upvalues && vm.open_upvalues->location >= last) {
+        obj_upvalue_t *upvalue = vm.open_upvalues;
+        upvalue->closed = *upvalue->location;
+        upvalue->location = &upvalue->closed;
+        
+        vm.open_upvalues = upvalue->next;
+    }
 }
 
 /// @brief Checks if the specified value has a false behaviour.
@@ -386,8 +418,16 @@ static interpret_result_t run()
 
                 break;
             }
+            case OP_CLOSE_UPVALUE: {
+                close_upvalues(vm.stack_top - 1);
+                pop();
+                break;
+            }
             case OP_RETURN: {
                 value_t result = pop();
+                // Closes variables defined in the context of the function's scope,
+                // such as it's parameters or locals declared inside its body.
+                close_upvalues(frame->slots);
                 vm.frame_count--;
 
                 if (vm.frame_count == 0) {

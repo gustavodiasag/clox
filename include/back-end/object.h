@@ -73,6 +73,14 @@ typedef struct obj_upvalue_t {
     obj_t obj;
     // Pointer to a closed-over variable.
     value_t *location;
+    // Because an object is already stored in the heap, when an
+    // upvalue is closed, the variable representation becomes
+    // part of the upvalue object.
+    value_t closed;
+    // The linked-list semantic is used so that the virtual machine
+    // is able to store its own list of upvalues that point to
+    // variables still on the stack.
+    struct obj_upvalue_t *next;
 } obj_upvalue_t;
 
 // Wrapper around a function object that represents its declaration

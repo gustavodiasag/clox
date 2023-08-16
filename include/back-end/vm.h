@@ -32,6 +32,8 @@ typedef struct {
     table_t strings;
     // Stores all global variables created in the program.
     table_t globals;
+    // List of open upvalues that point to variables on the stack.
+    obj_upvalue_t *open_upvalues;
     // Linked list keeping track of every heap-allocated object.
     obj_t *objects;
 } vm_t;

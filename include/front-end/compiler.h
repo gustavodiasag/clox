@@ -25,6 +25,8 @@ typedef struct {
     // Records the scope depth of the block where
     // the local variable was declared.
     int depth;
+    // Tells if the local is captured by a closure.
+    bool is_captured;
 } local_t;
 
 typedef struct {

@@ -257,6 +257,7 @@ static void init_compiler(compiler_t *compiler, func_type_t type)
 
     local_t *local = &current->locals[current->local_count++];
     local->depth = 0;
+    local->is_captured = false;
     local->name.start = "";
     local->name.length = 0;
 }
@@ -291,7 +292,13 @@ static void end_scope()
         && current->locals[current->local_count - 1].depth > current->scope_depth) {
         // Local variables occupy slots in the virtual machine's stack, so 
         // when going out of scope, the correspondent slot should be freed.
-        emit_byte(OP_POP);
+        // However, if a local has been captured by a closure, it must be
+        // transferred to the heap.
+        if (current->locals[current->local_count - 1].is_captured) {
+            emit_byte(OP_CLOSE_UPVALUE);
+        } else {
+            emit_byte(OP_POP);
+        }
         current->local_count--;
     }
 }
@@ -514,8 +521,11 @@ static int resolve_upvalue(compiler_t *compiler, token_t *name)
 
     int local = resolve_local(compiler->enclosing, name);
     
-    if (local != -1)
+    if (local != -1) {
+        compiler->enclosing->locals[local].is_captured = true;
+
         return add_upvalue(compiler, (uint8_t)local, true);
+    }
 
     int upvalue = resolve_upvalue(compiler->enclosing, name);
 
@@ -537,6 +547,7 @@ static void add_local(token_t name)
     local_t *local = &current->locals[current->local_count++];
     local->name = name;
     local->depth = -1;
+    local->is_captured = false;
 }
 
 /// @brief Records the existence of a local variable.
