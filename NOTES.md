@@ -159,9 +159,10 @@ The entire code can be seen as a top-level function, which defines two local var
 
 # Mark-Sweep Garbage Collection
 
-The basic idea of this tracing garbage collection can be extracted from John McCarthy's paper on the Lisp programming language:
+The basic idea of this tracing garbage collection can be extracted from John McCarthy's [paper](http://www-formal.stanford.edu/jmc/recursive.pdf) on the Lisp programming language:
 
 > First, the program finds all registers accesible from the base register and makes their signs negative. This is accomplished by starting from each of the base registers and changing the sign of every register that can be reached from it. If the program encounters a register in this process which already has a negative sign, it assumes that this register has already been reached.
+>
 > After all of the accessible register have had their signs changed, the program goes through the area of memory reserved for the storage of list structures and puts all the registers whose signs were not changed in the previous step back on the free-storage list, and makes the signs of the accessible registers positive again.
 
 Following this base functionality, mark-sweep works in two phases:
