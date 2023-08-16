@@ -5,7 +5,8 @@
 #include "table.h"
 #include "value.h"
 
-#define FRAMES_MAX 64   
+#define FRAMES_MAX 64
+#define GC_THRESHOLD 0x100000   
 #define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
 
 // Represents a single ongoing function call.
@@ -36,6 +37,10 @@ typedef struct {
     table_t globals;
     // List of open upvalues that point to variables on the stack.
     obj_upvalue_t *open_upvalues;
+    // Total number of bytes the vm has allocated.
+    size_t bytes_allocated;
+    // Threshold that triggers the next collection.
+    size_t next_gc;
     // Linked list keeping track of every heap-allocated object.
     obj_t *objects;
     // Stores all the grey objects marked by the gc.

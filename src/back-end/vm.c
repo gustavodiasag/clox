@@ -452,8 +452,10 @@ static interpret_result_t run()
 void init_vm()
 {
     reset_stack();
-    vm.objects = NULL;
 
+    vm.objects = NULL;
+    vm.bytes_allocated = 0;
+    vm.next_gc = GC_THRESHOLD;
     vm.gray_count = 0;
     vm.gray_capacity = 0;
     vm.gray_stack = NULL;

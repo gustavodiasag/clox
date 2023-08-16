@@ -24,4 +24,5 @@
     reallocate(ptr, sizeof(type) * old_count, 0)
 
 void *reallocate(void *pointer, size_t old_size, size_t new_size);
+void free_obj(obj_t *obj);
 void free_objs();

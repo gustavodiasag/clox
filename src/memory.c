@@ -18,10 +18,15 @@
 /// @return pointer to the newly allocated memory
 void *reallocate(void *ptr, size_t old_size, size_t new_size)
 {
+    vm.bytes_allocated += (new_size - old_size);
+
     if (new_size > old_size)
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
 #endif
+
+    if (vm.bytes_allocated > vm.next_gc)
+        collect_garbage();
 
     if (new_size == 0) {
         free(ptr);
@@ -38,7 +43,7 @@ void *reallocate(void *ptr, size_t old_size, size_t new_size)
 
 /// @brief Deallocates the specified object considering its type.
 /// @param obj object to be freed from memory
-static void free_obj(obj_t *obj)
+void free_obj(obj_t *obj)
 {
 #ifdef DEBUG_LOG_GC
     printf("%p free type %d\n", (void *)obj, obj->type);

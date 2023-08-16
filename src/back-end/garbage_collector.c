@@ -1,6 +1,9 @@
+#include <stdlib.h>
+
 #include "back-end/garbage_collector.h"
 #include "common.h"
 #include "front-end/compiler.h"
+#include "memory.h"
 
 #ifdef DEBUG_LOG_GC
 
@@ -8,6 +11,8 @@
 #include "debug.h"
 
 #endif
+
+#define GC_HEAP_GROW_FACTOR 2
 
 /// @brief Marks a heap-stored value from the language
 /// @param obj object referenced by the value 
@@ -177,7 +182,7 @@ static void sweep()
                 vm.objects = obj;
             }
 
-            free_object(white);
+            free_obj(white);
         }
     }
 }
@@ -185,7 +190,9 @@ static void sweep()
 void collect_garbage()
 {
 #ifdef DEBUG_LOG_GC
-    printf("--gc begin\n");
+    printf("-- gc begin\n");
+    // Captures the heap size before the collection is triggered.
+    size_t before = vm.bytes_allocated;
 #endif
 
     mark_roots();
@@ -193,7 +200,13 @@ void collect_garbage()
     table_remove_white(&vm.strings);
     sweep();
 
+    vm.next_gc = vm.bytes_allocated * GC_HEAP_GROW_FACTOR;
+
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
+    // Logs how much memory the garbage collector reclaimed during
+    // its execution. 
+    printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
+        before - vm.bytes_allocated, before, vm.bytes_allocated, vm.next_gc);
 #endif
 }
