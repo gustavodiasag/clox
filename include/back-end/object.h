@@ -29,6 +29,8 @@ typedef enum {
 struct obj_t{
     // Identifies what kind of object it is.
     obj_type_t type;
+    // Flag determining that the object is reachable in memory.
+    bool is_marked;
     struct obj_t *next;
 };
 

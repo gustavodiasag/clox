@@ -36,6 +36,11 @@ typedef struct {
     obj_upvalue_t *open_upvalues;
     // Linked list keeping track of every heap-allocated object.
     obj_t *objects;
+    // Stores all the grey objects marked by the gc.
+    obj_t **gray_stack;
+    int gray_capacity;
+    // Number of grey objects in total.
+    int gray_count;
 } vm_t;
 
 typedef enum {

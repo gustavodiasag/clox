@@ -2,6 +2,7 @@ project(clox)
 
 add_library(source
     back-end/chunk.c
+    back-end/garbage_collector.c
     back-end/object.c
     back-end/table.c
     back-end/value.c

@@ -79,6 +79,7 @@ typedef struct {
 
 
 obj_func_t *compile(const char *source);
+void mark_compiler_roots();
 static void expression();
 static void statement();
 static void declaration();

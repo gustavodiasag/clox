@@ -21,9 +21,16 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
 {
     obj_t *obj = (obj_t *)reallocate(NULL, 0, size);
     obj->type = type;
+    // Every new object begins unmarked because it hasn't been
+    // determined if it is reachable or not.
+    obj->is_marked = false;
     // New object is inserted at the head of the linked list.
     obj->next = vm.objects;
     vm.objects = obj;
+
+#ifdef DEBUG_LOG_GC
+    printf("%p allocate %zu for %d\n", (void *)obj, size, type);
+#endif
 
     return obj;
 }

@@ -1,7 +1,15 @@
 #include <stdlib.h>
 
 #include "memory.h"
+#include "back-end/garbage_collector.h"
 #include "back-end/vm.h"
+
+#ifdef DEBUG_LOG_GC
+
+#include <stdio.h>
+#include "debug.h"
+
+#endif
 
 /// @brief Allocates, frees, shrinks and expands the size of a dynamic allocation.
 /// @param ptr pointer to the block of memory allocated
@@ -10,6 +18,11 @@
 /// @return pointer to the newly allocated memory
 void *reallocate(void *ptr, size_t old_size, size_t new_size)
 {
+    if (new_size > old_size)
+#ifdef DEBUG_STRESS_GC
+        collect_garbage();
+#endif
+
     if (new_size == 0) {
         free(ptr);
         return NULL;
@@ -27,6 +40,10 @@ void *reallocate(void *ptr, size_t old_size, size_t new_size)
 /// @param obj object to be freed from memory
 static void free_obj(obj_t *obj)
 {
+#ifdef DEBUG_LOG_GC
+    printf("%p free type %d\n", (void *)obj, obj->type);
+#endif
+
     switch(obj->type) {
         // Only the closure object is freed and not the function it
         // encloses, since the closure doesn't own the function. There
@@ -73,4 +90,6 @@ void free_objs()
         free_obj(obj);
         obj = next;
     }
+
+    free(vm.gray_stack);
 }

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "back-end/garbage_collector.h"
 #include "back-end/object.h"
 #include "back-end/vm.h"
 #include "common.h"
@@ -321,6 +322,21 @@ obj_func_t *compile(const char *source)
     obj_func_t *func = end_compiler();
     
     return (parser.had_error) ? NULL : func;
+}
+
+/// @brief Marks memory allocated on the heap by the compiler.
+void mark_compiler_roots()
+{   
+    // A compiler itself periodically gets memory from the heap for literals
+    // and its constant table. If the garbage collection is triggered while
+    // compilation, any values accessible by the compiler need to be treated
+    // as roots.
+    compiler_t *compiler = current;
+
+    while (compiler) {
+        mark_object((obj_t *)compiler);
+        compiler = compiler->enclosing;
+    }
 }
 
 /// @brief Parses a token considering the level of precedence specified.
