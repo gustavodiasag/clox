@@ -191,8 +191,13 @@ static bool is_falsey(value_t value)
 /// @brief Concatenates two string objects.
 static void concat()
 {
-    obj_str_t *b = AS_STR(pop());
-    obj_str_t *a = AS_STR(pop());
+    // Concatenating two strings requires allocating a new character
+    // array on the heap, which can trigger garbage collection. To
+    // maintain a reference to those objects so they can be reached
+    // in the marking process, they are peeked instead of popped
+    // from the stack.
+    obj_str_t *b = AS_STR(peek(0));
+    obj_str_t *a = AS_STR(peek(1));
 
     int len = a->length + b->length;
     char *chars = ALLOCATE(char, len + 1);
@@ -202,6 +207,9 @@ static void concat()
     chars[len] = '\0';
 
     obj_str_t *result = take_str(chars, len);
+
+    pop();
+    pop();
     push(OBJ_VAL(result));
 }
 
