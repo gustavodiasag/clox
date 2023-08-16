@@ -24,9 +24,11 @@ typedef struct {
     // Dealing with function calls with stack semantics helps
     // optimizing memory usage by avoiding heap allocations.
     call_frame_t frames[FRAMES_MAX];
-    // Stores the current height off the call frame stack.
+    // Stores the current height of the call frame stack.
     int frame_count;
-    value_t stack[STACK_MAX]; 
+    // Runtime stack of values.
+    value_t stack[STACK_MAX];
+    // Pointer to the top of the stack.
     value_t *stack_top;
     // Stores all strings created in the program.
     table_t strings;
