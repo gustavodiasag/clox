@@ -13,7 +13,7 @@
 /// @param obj object referenced by the value 
 void mark_object(obj_t *obj)
 {
-    if (!obj)
+    if (!obj || obj->is_marked)
         return;
 
 #ifdef DEBUG_LOG_GC
@@ -43,6 +43,59 @@ void mark_value(value_t value)
     // no heap allocation.
     if (IS_OBJ(value))
         mark_object(AS_OBJ(value));
+}
+
+/// @brief Marks all the values stored in an array.
+/// @param array value array
+static void mark_array(value_array_t *array)
+{
+    for (int i = 0; i < array->count; i++)
+        mark_value(array->values[i]);
+}
+
+/// @brief Marks all the given object's heap references.
+/// @param obj root object
+static void blacken_object(obj_t *obj)
+{
+#ifdef DEBUG_LOG_GC
+    printf("%p blacken ", (void *)obj);
+    print_value(OBJ_VAL(obj));
+    printf("\n");
+#endif
+    // Marking an object as "black" is not a direct state change.
+    // A black object is any object whose `is_marked` field is
+    // set and that is no longer in the gray stack.
+    switch (obj->type) {
+        // Each closure has a reference to the bare function it wraps,
+        // as well as an array of pointers to the upvalues it captures.
+        case OBJ_CLOSURE: {
+            obj_closure_t *closure = (obj_closure_t *)obj;
+            mark_object((obj_t *)closure->function);
+
+            for (int i = 0; i < closure->upvalue_count; i++)
+                mark_object((obj_t *)closure->upvalues[i]);
+            
+            break;
+        }
+        case OBJ_FUNC: {
+            obj_func_t *func = (obj_func_t *)obj;
+            // Deals with the string object containing the function's name.
+            mark_object((obj_t *)func->name);
+            // Marks the function's constant table values.
+            mark_array(&func->chunk.constants);
+            break;
+        }
+        // Strings and native function objects contain no
+        // outgoing references.
+        case OBJ_NATIVE:
+        case OBJ_STR:
+            break;
+        case OBJ_UPVALUE:
+            // When an upvalue is closed, it contains a reference
+            // to the closed-over value.
+            mark_value(((obj_upvalue_t *)obj)->closed);
+            break;
+    }
 }
 
 /// @brief Marks all the positions from the given table.
@@ -77,6 +130,15 @@ static void mark_roots()
     mark_compiler_roots();
 }
 
+/// @brief Traverses the stack of grey objects and their references.
+static void trace_references()
+{
+    while (vm.gray_count > 0) {
+        obj_t *obj = vm.gray_stack[--vm.gray_count];
+        blacken_object(obj);
+    }
+}
+
 void collect_garbage()
 {
 #ifdef DEBUG_LOG_GC
@@ -84,6 +146,7 @@ void collect_garbage()
 #endif
 
     mark_roots();
+    trace_references();
 
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
