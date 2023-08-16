@@ -156,3 +156,16 @@ end
 ```
 
 The entire code can be seen as a top-level function, which defines two local variables: `a` and the function `foo`. The reference `a` in `print (a)` inside the `foo()` function refers to a local variable defined outside the function, which is defined as an upvalue. Using this approach, every closure maintains an array of upvalues, one for each surrounding variable that the closure uses.
+
+# Mark-Sweep Garbage Collection
+
+The basic idea of this tracing garbage collection can be extracted from John McCarthy's paper on the Lisp programming language:
+
+> First, the program finds all registers accesible from the base register and makes their signs negative. This is accomplished by starting from each of the base registers and changing the sign of every register that can be reached from it. If the program encounters a register in this process which already has a negative sign, it assumes that this register has already been reached.
+> After all of the accessible register have had their signs changed, the program goes through the area of memory reserved for the storage of list structures and puts all the registers whose signs were not changed in the previous step back on the free-storage list, and makes the signs of the accessible registers positive again.
+
+Following this base functionality, mark-sweep works in two phases:
+
+- **Marking**: Starting with the roots and traversing or *tracing* through all of the objects those roots refer to. Each time an object is visited, it's marked in some way.
+
+- **Sweeping**: Once the mark phase completes, every reachable object in the heap has been marked. That means any unmarked object is unreachable and ripe for reclamation.
