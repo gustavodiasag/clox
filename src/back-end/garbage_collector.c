@@ -139,6 +139,37 @@ static void trace_references()
     }
 }
 
+static void sweep()
+{
+    obj_t *prev = NULL;
+    obj_t *obj = vm.objects;
+    // Walks the linked list of every object in the heap,
+    // stored in the virtual machine.
+    while (obj) {
+        // Marked objects are simply ignored.
+        if (obj->is_marked) {
+            // Every marked object must have their mark flag
+            // unset for the next collection cycle.
+            obj->is_marked = false;
+            prev = obj;
+            obj = obj->next;
+        } else {
+            // If an object is unmarked, it is unlinked
+            // from the list.
+            obj_t *white = obj;
+            obj = obj->next;
+
+            if (prev) {
+                prev->next = obj;
+            } else {
+                vm.objects = obj;
+            }
+
+            free_object(white);
+        }
+    }
+}
+
 void collect_garbage()
 {
 #ifdef DEBUG_LOG_GC
@@ -147,6 +178,7 @@ void collect_garbage()
 
     mark_roots();
     trace_references();
+    sweep();
 
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
