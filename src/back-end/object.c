@@ -101,8 +101,13 @@ static obj_str_t *allocate_str(char *chars, int len, uint32_t hash)
     str->hash = hash;
     str->length = len;
     memcpy(str->chars, chars, len);
+    // Object is pushed onto the stack to guarantee it is reachable in case
+    // garbage collection is triggered while resizing the interned strings
+    // table.
+    push(OBJ_VAL(str));
     // Whenever a new string is created, it's added to the virtual machine's table.
     table_set(&vm.strings, str, NIL_VAL);
+    pop();
     
     return str;
 }
