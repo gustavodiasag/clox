@@ -98,6 +98,18 @@ static void blacken_object(obj_t *obj)
     }
 }
 
+/// @brief Frees the table's keys not marked for reachability.
+/// @param table 
+void table_remove_white(table_t *table)
+{
+    for (int i = 0; i < table->size; i++) {
+        entry_t *entry = &table->entries[i];
+
+        if (entry->key && !entry->key->obj.is_marked)
+            table_delete(table, entry->key);
+    }
+}
+
 /// @brief Marks all the positions from the given table.
 /// @param table hash table
 void mark_table(table_t *table)
@@ -178,6 +190,7 @@ void collect_garbage()
 
     mark_roots();
     trace_references();
+    table_remove_white(&vm.strings);
     sweep();
 
 #ifdef DEBUG_LOG_GC
