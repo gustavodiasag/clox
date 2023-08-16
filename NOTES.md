@@ -170,3 +170,7 @@ Following this base functionality, mark-sweep works in two phases:
 - **Marking**: Starting with the roots and traversing or *tracing* through all of the objects those roots refer to. Each time an object is visited, it's marked in some way.
 
 - **Sweeping**: Once the mark phase completes, every reachable object in the heap has been marked. That means any unmarked object is unreachable and ripe for reclamation.
+
+# Weak references
+
+Are defined as references that do not protect the referenced object from collection by a garbage collector. An object referenced only by weak references is considered weakly reachable, and can be treated as unreachable and so may be collected at any time.
