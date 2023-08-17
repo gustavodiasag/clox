@@ -334,7 +334,7 @@ void mark_compiler_roots()
     compiler_t *compiler = current;
 
     while (compiler) {
-        mark_object((obj_t *)compiler);
+        mark_object((obj_t *)compiler->func);
         compiler = compiler->enclosing;
     }
 }

@@ -1,7 +1,6 @@
 #include <stdlib.h>
 
 #include "back-end/garbage_collector.h"
-#include "common.h"
 #include "front-end/compiler.h"
 #include "memory.h"
 
@@ -18,7 +17,10 @@
 /// @param obj object referenced by the value 
 void mark_object(obj_t *obj)
 {
-    if (!obj || obj->is_marked)
+    if (!obj)
+        return;
+
+    if (obj->is_marked)
         return;
 
 #ifdef DEBUG_LOG_GC
