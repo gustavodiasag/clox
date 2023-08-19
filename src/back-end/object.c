@@ -35,6 +35,17 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
     return obj;
 }
 
+/// @brief Creates a new class object
+/// @param name class' name
+/// @return pointer to the object created
+obj_class_t *new_class(obj_str_t *name)
+{
+    obj_class_t *class = ALLOCATE_OBJ(obj_class_t, OBJ_CLASS);
+    class->name = name;
+
+    return class;
+}
+
 /// @brief Creates a new upvalue object
 /// @param slot stack position of the captured variable
 /// @return pointer to the object created
@@ -184,6 +195,9 @@ static void print_func(obj_func_t *func)
 void print_obj(value_t value)
 {
     switch (OBJ_TYPE(value)) {
+        case OBJ_CLASS:
+            printf("%s", AS_CLASS(value)->name->chars);
+            break;
         case OBJ_CLOSURE:
             print_func(AS_CLOSURE(value)->function);
             break;

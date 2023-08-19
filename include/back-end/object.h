@@ -6,11 +6,13 @@
 
 #define OBJ_TYPE(val)   (AS_OBJ(val)->type)
 
+#define IS_CLASS(val)   is_obj_type(val, OBJ_CLASS)
 #define IS_CLOSURE(val) is_obj_type(val, OBJ_CLOSURE)
 #define IS_FUNC(val)    is_obj_type(val, OBJ_FUNC)
 #define IS_NATIVE(val)  is_obj_type(val, OBJ_NATIVE)
 #define IS_STR(val)     is_obj_type(val, OBJ_STR)
 
+#define AS_CLASS(val)   ((obj_class_t *)AS_OBJ(val))
 #define AS_CLOSURE(val) ((obj_closure_t *)AS_OBJ(val))
 #define AS_FUNC(val)    ((obj_func_t *)AS_OBJ(val))
 #define AS_NATIVE(val)  (((obj_native_t *)AS_OBJ(val))->function)
@@ -19,6 +21,7 @@
 
 // All heap-allocated components supported in the language.
 typedef enum {
+    OBJ_CLASS,
     OBJ_CLOSURE,
     OBJ_FUNC,
     OBJ_NATIVE,
@@ -99,6 +102,14 @@ typedef struct {
     int upvalue_count;
 } obj_closure_t;
 
+// Runtime representation of classes.
+typedef struct {
+    obj_t obj;
+    // Class' name.
+    obj_str_t *name;
+} obj_class_t;
+
+obj_class_t *new_class(obj_str_t *name);
 obj_upvalue_t *new_upvalue(value_t *slot);
 obj_closure_t *new_closure(obj_func_t *function);
 obj_func_t *new_func();

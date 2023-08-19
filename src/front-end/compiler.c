@@ -667,6 +667,19 @@ static void function(func_type_t type)
     }
 }
 
+static void class_declaration()
+{
+    consume(TOKEN_IDENTIFIER, "Expect class name.");
+    uint8_t name = identifier_const(&parser.previous);
+    declare_var();
+
+    emit_bytes(OP_CLASS, name);
+    define_var(name);
+
+    consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+    consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+}
+
 /// @brief Stores a function as a newly declared variable (first-class function).
 static void fun_declaration()
 {
@@ -862,7 +875,9 @@ static void syncronize() {
 /// @brief Parses a single declaration.
 static void declaration()
 {
-    if (match(TOKEN_FUN)) {
+    if (match(TOKEN_CLASS)) {
+        class_declaration();
+    } else if (match(TOKEN_FUN)) {
         fun_declaration();
     } else if (match(TOKEN_VAR)) {
         var_declaration();

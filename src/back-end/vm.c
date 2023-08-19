@@ -431,6 +431,10 @@ static interpret_result_t run()
                 pop();
                 break;
             }
+            case OP_CLASS: {
+                push(OBJ_VAL(new_class(READ_STR())));
+                break;
+            }
             case OP_RETURN: {
                 value_t result = pop();
                 // Closes variables defined in the context of the function's scope,

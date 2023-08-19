@@ -50,6 +50,10 @@ void free_obj(obj_t *obj)
 #endif
 
     switch(obj->type) {
+        case OBJ_CLASS:  {
+            FREE(obj_class_t, obj);
+            break;
+        }
         // Only the closure object is freed and not the function it
         // encloses, since the closure doesn't own the function. There
         // may be multiple closures that reference the same function.
