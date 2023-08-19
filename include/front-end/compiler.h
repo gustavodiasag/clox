@@ -93,3 +93,4 @@ static void variable(bool can_assign);
 static void and_(bool can_assign);
 static void or_(bool can_assign);
 static void call(bool can_assign);
+static void dot(bool can_assign);

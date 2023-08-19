@@ -219,6 +219,7 @@ void print_obj(value_t value)
             break;
         case OBJ_INSTANCE: 
             printf("%s instance", AS_INSTANCE(value)->class->name->chars);
+            break;
         case OBJ_NATIVE:
             printf("<native fn>");
             break;

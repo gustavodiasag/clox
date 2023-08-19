@@ -334,13 +334,58 @@ static interpret_result_t run()
                 *frame->closure->upvalues[slot]->location = peek(0);
                 break;
             }
+            case OP_GET_PROPERTY: {
+                // Only instances are allowed to have fields. So there's
+                // the need to check that the value is an instance before
+                // accessing any fields on it.
+                if (!IS_INSTANCE(peek(0))) {
+                    runtime_err("Only instances have properties.");
+
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                obj_instance_t *instance = AS_INSTANCE(peek(0));
+                obj_str_t *name = READ_STR();
+
+                value_t value;
+
+                if (table_get(&instance->fields, name, &value)) {
+                    pop(); /* instance */
+                    push(value);
+                    break;
+                }
+                // In case a field is not defined for the given instance.  
+                runtime_err("Undefined property '%s'.", name->chars);
+
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            case OP_SET_PROPERTY: {
+                // Storing data on a field of a value that is not an
+                // instance is considered an error.
+                if (!IS_INSTANCE(peek(1))) {
+                    runtime_err("Only instances have fields.");
+
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                // At this point, the top of the stack has the instance
+                // whose field is being sest and above that, the value
+                // to be stored. The operand is read and the field name
+                // string is determined. With that, the value on top of
+                // the stack is stored into the instance's field table.
+                obj_instance_t *instance = AS_INSTANCE(peek(1));
+                table_set(&instance->fields, READ_STR(), peek(0));
+
+                value_t value = pop();
+                pop();
+                push(value);
+                break;
+            }
             case OP_EQUAL: {
                 value_t b = pop();
                 value_t a = pop();
 
                 push(BOOL_VAL(values_equal(a, b)));
+                break;
             }
-            break;
             case OP_GREATER:
                 BINARY_OP(BOOL_VAL, >);
                 break;

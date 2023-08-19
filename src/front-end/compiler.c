@@ -28,7 +28,7 @@ parse_rule_t rules[] = {
     [TOKEN_LEFT_BRACE]      = {NULL, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE]     = {NULL, NULL, PREC_NONE},
     [TOKEN_COMMA]           = {NULL, NULL, PREC_NONE},
-    [TOKEN_DOT]             = {NULL, NULL, PREC_NONE},
+    [TOKEN_DOT]             = {NULL, dot, PREC_CALL},
     [TOKEN_MINUS]           = {unary, binary, PREC_TERM},
     [TOKEN_PLUS]            = {NULL, binary, PREC_TERM},
     [TOKEN_SEMICOLON]       = {NULL, NULL, PREC_NONE},
@@ -1023,10 +1023,27 @@ static void binary(bool can_assign)
 }
 
 /// @brief Emits the operational code for a function call.
+/// @param can_assign whether to consider assigment or not
 static void call(bool can_assign)
 {
     uint8_t args = arg_list();
     emit_bytes(OP_CALL, args);
+}
+
+/// @brief Parses a class field access.
+/// @param can_assign whether to consider assigment or not
+static void dot(bool can_assign)
+{
+    consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
+
+    uint8_t name = identifier_const(&parser.previous);
+    
+    if (can_assign && match(TOKEN_EQUAL)) {
+        expression();
+        emit_bytes(OP_SET_PROPERTY, name);
+    } else {
+        emit_bytes(OP_GET_PROPERTY, name);
+    }
 }
 
 /// @brief Parses a prefix expression.
