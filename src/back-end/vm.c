@@ -119,6 +119,14 @@ static bool call_value(value_t callee, int args)
 {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
+            // If the value being called is a class, then it
+            // is treated as a constructor call.
+            case OBJ_CLASS: {
+                obj_class_t *class = AS_CLASS(callee);
+                vm.stack_top[-args - 1] = OBJ_VAL(new_instance(class));
+
+                return true;
+            }
             case OBJ_CLOSURE:
                 return init_frame(AS_CLOSURE(callee), args);
             case OBJ_NATIVE: {

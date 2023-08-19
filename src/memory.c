@@ -70,6 +70,13 @@ void free_obj(obj_t *obj)
             FREE(obj_func_t, obj);
             break;
         }
+        case OBJ_INSTANCE: {
+            obj_instance_t *instance = (obj_instance_t *)obj;
+            free_table(&instance->fields);
+            
+            FREE(obj_instance_t, obj);
+            break;
+        }
         case OBJ_NATIVE: {
             FREE(obj_native_t, obj);
             break;

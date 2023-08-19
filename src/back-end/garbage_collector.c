@@ -96,6 +96,14 @@ static void blacken_object(obj_t *obj)
             mark_array(&func->chunk.constants);
             break;
         }
+        // If an instance is alive, both its class and its instance
+        // fields should be marked.
+        case OBJ_INSTANCE: {
+            obj_instance_t *instance = (obj_instance_t *)obj;
+            mark_object((obj_t *)instance->class);
+            mark_table(&instance->fields);
+            break;
+        }
         // Strings and native function objects contain no
         // outgoing references.
         case OBJ_NATIVE:

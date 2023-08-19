@@ -2,28 +2,32 @@
 
 #include "common.h"
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 #define OBJ_TYPE(val)   (AS_OBJ(val)->type)
 
-#define IS_CLASS(val)   is_obj_type(val, OBJ_CLASS)
-#define IS_CLOSURE(val) is_obj_type(val, OBJ_CLOSURE)
-#define IS_FUNC(val)    is_obj_type(val, OBJ_FUNC)
-#define IS_NATIVE(val)  is_obj_type(val, OBJ_NATIVE)
-#define IS_STR(val)     is_obj_type(val, OBJ_STR)
+#define IS_CLASS(val)       is_obj_type(val, OBJ_CLASS)
+#define IS_CLOSURE(val)     is_obj_type(val, OBJ_CLOSURE)
+#define IS_FUNC(val)        is_obj_type(val, OBJ_FUNC)
+#define IS_INSTANCE(val)    is_obj_type(val, OBJ_INSTANCE)
+#define IS_NATIVE(val)      is_obj_type(val, OBJ_NATIVE)
+#define IS_STR(val)         is_obj_type(val, OBJ_STR)
 
-#define AS_CLASS(val)   ((obj_class_t *)AS_OBJ(val))
-#define AS_CLOSURE(val) ((obj_closure_t *)AS_OBJ(val))
-#define AS_FUNC(val)    ((obj_func_t *)AS_OBJ(val))
-#define AS_NATIVE(val)  (((obj_native_t *)AS_OBJ(val))->function)
-#define AS_STR(val)     ((obj_str_t *)AS_OBJ(val))
-#define AS_CSTR(val)    (((obj_str_t *)AS_OBJ(val))->chars)
+#define AS_CLASS(val)       ((obj_class_t *)AS_OBJ(val))
+#define AS_CLOSURE(val)     ((obj_closure_t *)AS_OBJ(val))
+#define AS_FUNC(val)        ((obj_func_t *)AS_OBJ(val))
+#define AS_INSTANCE(val)    ((obj_instance_t *)AS_OBJ(val))
+#define AS_NATIVE(val)      (((obj_native_t *)AS_OBJ(val))->function)
+#define AS_STR(val)         ((obj_str_t *)AS_OBJ(val))
+#define AS_CSTR(val)        (((obj_str_t *)AS_OBJ(val))->chars)
 
 // All heap-allocated components supported in the language.
 typedef enum {
     OBJ_CLASS,
     OBJ_CLOSURE,
     OBJ_FUNC,
+    OBJ_INSTANCE,
     OBJ_NATIVE,
     OBJ_STR,
     OBJ_UPVALUE
@@ -109,10 +113,20 @@ typedef struct {
     obj_str_t *name;
 } obj_class_t;
 
+// Represents an instance of some class.
+typedef struct {
+    obj_t obj;
+    // Pointer to the class that the instance represents.
+    obj_class_t *class;
+    // Instances' state storage.
+    table_t fields;
+} obj_instance_t;
+
 obj_class_t *new_class(obj_str_t *name);
 obj_upvalue_t *new_upvalue(value_t *slot);
 obj_closure_t *new_closure(obj_func_t *function);
 obj_func_t *new_func();
+obj_instance_t *new_instance(obj_class_t *class);
 obj_native_t *new_native(native_fn_t function);
 obj_str_t *take_str(char *chars, int len);
 obj_str_t *copy_str(const char * chars, int len);

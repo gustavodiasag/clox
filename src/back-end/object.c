@@ -63,7 +63,7 @@ obj_upvalue_t *new_upvalue(value_t *slot) {
 /// @return pointer to the object created
 obj_closure_t *new_closure(obj_func_t *function)
 {
-    obj_upvalue_t **upvalues = ALLOCATE(obj_upvalue_t *, function->upvalue_count);
+    obj_upvalue_t **upvalues = ALLOCATE(obj_upvalue_t*, function->upvalue_count);
     
     for (int i = 0; i < function->upvalue_count; i++)
         upvalues[i] = NULL;
@@ -88,6 +88,19 @@ obj_func_t *new_func()
     init_chunk(&func->chunk);
 
     return func;
+}
+
+/// @brief Creates an object representing a new instance
+/// @param class instance's class
+/// @return pointer to the object created
+obj_instance_t *new_instance(obj_class_t *class)
+{
+    obj_instance_t *instance = ALLOCATE_OBJ(obj_instance_t, OBJ_INSTANCE);
+    instance->class = class;
+
+    init_table(&instance->fields);
+
+    return instance;
 }
 
 /// @brief Creates an object representing a native function.
@@ -204,6 +217,8 @@ void print_obj(value_t value)
         case OBJ_FUNC:
             print_func(AS_FUNC(value));
             break;
+        case OBJ_INSTANCE: 
+            printf("%s instance", AS_INSTANCE(value)->class->name->chars);
         case OBJ_NATIVE:
             printf("<native fn>");
             break;
