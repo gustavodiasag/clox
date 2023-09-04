@@ -111,6 +111,9 @@ typedef struct {
     obj_t obj;
     // Class' name.
     obj_str_t *name;
+    // Each class stores a hash table of methods. Keys are
+    // method names and each value is a closure object.
+    table_t methods;
 } obj_class_t;
 
 // Represents an instance of some class.

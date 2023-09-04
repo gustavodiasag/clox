@@ -42,6 +42,7 @@ obj_class_t *new_class(obj_str_t *name)
 {
     obj_class_t *class = ALLOCATE_OBJ(obj_class_t, OBJ_CLASS);
     class->name = name;
+    init_table(&class->methods);
 
     return class;
 }

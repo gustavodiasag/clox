@@ -76,6 +76,7 @@ static void blacken_object(obj_t *obj)
         case OBJ_CLASS: {
             obj_class_t *class = (obj_class_t *)obj;
             mark_object((obj_t *)class->name);
+            mark_table((&class->methods));
             break;
         }
         // Each closure has a reference to the bare function it wraps,

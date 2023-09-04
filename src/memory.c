@@ -51,6 +51,10 @@ void free_obj(obj_t *obj)
 
     switch(obj->type) {
         case OBJ_CLASS:  {
+            obj_class_t *class = (obj_class_t*)obj;
+            // The class object owns the memory for the method table,
+            // so when deallocating a class, the table must be freed.
+            free_table(&class->methods);
             FREE(obj_class_t, obj);
             break;
         }
