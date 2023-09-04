@@ -47,13 +47,13 @@ typedef enum {
 typedef struct compiler_t {
     // Linked-list used to provide access to the surrounding
     // compiler and its bytecode chunk.
-    struct compiler_t *enclosing;
-    obj_func_t *func;
+    struct compiler_t* enclosing;
+    obj_func_t* func;
     func_type_t type;
     // Locals that are in scope at each point in the
     // compilation process.
     local_t locals[UINT8_COUNT];
-    // Tracks how many locals are in scope. 
+    // Tracks how many locals are in scope.
     int local_count;
     // Upvalues looked-up by the function being parsed.
     upvalue_t upvalues[UINT8_COUNT];
@@ -77,8 +77,7 @@ typedef struct {
     precedence_t precedence;
 } parse_rule_t;
 
-
-obj_func_t *compile(const char *source);
+obj_func_t* compile(const char* source);
 void mark_compiler_roots();
 static void expression();
 static void statement();

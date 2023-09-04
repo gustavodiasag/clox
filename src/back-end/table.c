@@ -1,14 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "memory.h"
 #include "back-end/object.h"
 #include "back-end/table.h"
 #include "back-end/value.h"
+#include "memory.h"
 
 /// @brief Initializes the specified table, nothing is allocated until needed.
 /// @param table hash table
-void init_table(table_t *table)
+void init_table(table_t* table)
 {
     table->count = 0;
     table->size = 0;
@@ -17,7 +17,7 @@ void init_table(table_t *table)
 
 /// @brief Frees the entries allocated for the table, treating it as an array.
 /// @param table hash table
-void free_table(table_t *table)
+void free_table(table_t* table)
 {
     FREE_ARRAY(entry_t, table->entries, table->size);
     init_table(table);
@@ -28,13 +28,13 @@ void free_table(table_t *table)
 /// @param size table capacity
 /// @param key variable to be looked up
 /// @return table entry corresponding to the object key
-static entry_t *find_entry(entry_t *entries, int size, obj_str_t *key)
+static entry_t* find_entry(entry_t* entries, int size, obj_str_t* key)
 {
     uint32_t index = key->hash % size;
-    entry_t *tombstone = NULL;
+    entry_t* tombstone = NULL;
 
     while (true) {
-        entry_t *entry = &entries[index];
+        entry_t* entry = &entries[index];
 
         if (!entry->key) {
             if (IS_NIL(entry->value)) {
@@ -57,12 +57,12 @@ static entry_t *find_entry(entry_t *entries, int size, obj_str_t *key)
 /// @param key variable name
 /// @param value pointer to the resulting value
 /// @return whether the key was found or not
-bool table_get(table_t *table, obj_str_t *key, value_t *value)
+bool table_get(table_t* table, obj_str_t* key, value_t* value)
 {
     if (table->count == 0)
         return false;
 
-    entry_t *entry = find_entry(table->entries, table->size, key);
+    entry_t* entry = find_entry(table->entries, table->size, key);
 
     if (!entry)
         return false;
@@ -75,8 +75,9 @@ bool table_get(table_t *table, obj_str_t *key, value_t *value)
 /// @brief Resizes and reorganizes the table's entry array.
 /// @param table hash table
 /// @param size updated capacity
-static void adjust_size(table_t *table, int size) {
-    entry_t *entries = ALLOCATE(entry_t, size);
+static void adjust_size(table_t* table, int size)
+{
+    entry_t* entries = ALLOCATE(entry_t, size);
 
     for (int i = 0; i < size; i++) {
         entries[i].key = NULL;
@@ -89,13 +90,13 @@ static void adjust_size(table_t *table, int size) {
     // Once resized, the previous entries must be mapped again
     // considering that the table's size has been updated.
     for (int i = 0; i < table->size; i++) {
-        entry_t *entry = &table->entries[i];
+        entry_t* entry = &table->entries[i];
 
         if (!entry->key)
             // Ignores both empty entries and tombstones.
             continue;
 
-        entry_t *dest = find_entry(entries, size, entry->key);
+        entry_t* dest = find_entry(entries, size, entry->key);
         dest->key = entry->key;
         dest->value = entry->value;
         table->count++;
@@ -111,7 +112,7 @@ static void adjust_size(table_t *table, int size) {
 /// @param key variable name
 /// @param value variable's content
 /// @return whether the entry added is a new one or not
-bool table_set(table_t *table, obj_str_t *key, value_t value)
+bool table_set(table_t* table, obj_str_t* key, value_t value)
 {
     if (table->count + 1 > table->size * MAX_LOAD_FACTOR) {
         int size = GROW_CAPACITY(table->size);
@@ -119,7 +120,7 @@ bool table_set(table_t *table, obj_str_t *key, value_t value)
         adjust_size(table, size);
     }
 
-    entry_t *entry = find_entry(table->entries, table->size, key);
+    entry_t* entry = find_entry(table->entries, table->size, key);
     bool new_key = !entry->key;
 
     if (new_key && IS_NIL(entry->value))
@@ -135,12 +136,12 @@ bool table_set(table_t *table, obj_str_t *key, value_t value)
 /// @param table hash table
 /// @param key variable name
 /// @return whether the value was successfully deleted
-bool table_delete(table_t *table, obj_str_t *key)
+bool table_delete(table_t* table, obj_str_t* key)
 {
     if (table->count == 0)
         return false;
 
-    entry_t *entry = find_entry(table->entries, table->size, key);
+    entry_t* entry = find_entry(table->entries, table->size, key);
 
     if (!entry->key)
         return false;
@@ -156,10 +157,10 @@ bool table_delete(table_t *table, obj_str_t *key)
 /// @brief Copies all entries from one table to another.
 /// @param src table containing the entries being transferred
 /// @param dest table receiving the new entries
-void add_all(table_t *src, table_t *dest)
+void add_all(table_t* src, table_t* dest)
 {
     for (int i = 0; i < src->size; i++) {
-        entry_t *entry = &src->entries[i];
+        entry_t* entry = &src->entries[i];
 
         if (entry->key)
             table_set(dest, entry->key, entry->value);
@@ -172,7 +173,7 @@ void add_all(table_t *src, table_t *dest)
 /// @param len key length
 /// @param hash key's hash value
 /// @return pointer to the entry containing that key
-obj_str_t *table_find(table_t *table, const char *chars, int len, uint32_t hash)
+obj_str_t* table_find(table_t* table, const char* chars, int len, uint32_t hash)
 {
     if (table->count == 0)
         return NULL;
@@ -180,16 +181,14 @@ obj_str_t *table_find(table_t *table, const char *chars, int len, uint32_t hash)
     uint32_t index = hash % table->size;
 
     while (true) {
-        entry_t *entry = &table->entries[index];
+        entry_t* entry = &table->entries[index];
 
         if (!entry->key) {
             // Stop if an empty non-tombstone entry is found.
             if (IS_NIL(entry->value))
                 return NULL;
 
-        } else if (entry->key->length == len
-            && entry->key->hash == hash
-            && memcmp(entry->key->chars, chars, len) == 0) {
+        } else if (entry->key->length == len && entry->key->hash == hash && memcmp(entry->key->chars, chars, len) == 0) {
 
             return entry->key;
         }

@@ -53,7 +53,7 @@ typedef enum {
 // the source string and the number of characters it contains.
 typedef struct {
     token_type_t type;
-    const char *start;
+    const char* start;
     int length;
     int line;
 } token_t;

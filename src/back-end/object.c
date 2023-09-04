@@ -1,25 +1,25 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "memory.h"
 #include "back-end/object.h"
 #include "back-end/table.h"
 #include "back-end/value.h"
 #include "back-end/vm.h"
+#include "memory.h"
 
 #define ALLOCATE_OBJ(type, obj_type) \
-    (type *)allocate_obj(sizeof(type), obj_type)
+    (type*)allocate_obj(sizeof(type), obj_type)
 
 #define ALLOCATE_STR(len) \
-    (obj_str_t *)allocate_obj(sizeof(obj_str_t) + sizeof(char[len]), OBJ_STR)
+    (obj_str_t*)allocate_obj(sizeof(obj_str_t) + sizeof(char[len]), OBJ_STR)
 
 /// @brief Allocates an object of a given size on the heap.
 /// @param size specified number of bytes for varying extra fields
 /// @param type type of the object being allocated
 /// @return pointer to the object created
-static obj_t *allocate_obj(size_t size, obj_type_t type)
+static obj_t* allocate_obj(size_t size, obj_type_t type)
 {
-    obj_t *obj = (obj_t *)reallocate(NULL, 0, size);
+    obj_t* obj = (obj_t*)reallocate(NULL, 0, size);
     obj->type = type;
     // Every new object begins unmarked because it hasn't been
     // determined if it is reachable or not.
@@ -29,7 +29,7 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
     vm.objects = obj;
 
 #ifdef DEBUG_LOG_GC
-    printf("%p allocate %zu for %d\n", (void *)obj, size, type);
+    printf("%p allocate %zu for %d\n", (void*)obj, size, type);
 #endif
 
     return obj;
@@ -38,9 +38,9 @@ static obj_t *allocate_obj(size_t size, obj_type_t type)
 /// @brief Creates a new class object
 /// @param name class' name
 /// @return pointer to the object created
-obj_class_t *new_class(obj_str_t *name)
+obj_class_t* new_class(obj_str_t* name)
 {
-    obj_class_t *class = ALLOCATE_OBJ(obj_class_t, OBJ_CLASS);
+    obj_class_t* class = ALLOCATE_OBJ(obj_class_t, OBJ_CLASS);
     class->name = name;
     init_table(&class->methods);
 
@@ -50,8 +50,9 @@ obj_class_t *new_class(obj_str_t *name)
 /// @brief Creates a new upvalue object
 /// @param slot stack position of the captured variable
 /// @return pointer to the object created
-obj_upvalue_t *new_upvalue(value_t *slot) {
-    obj_upvalue_t *upvalue = ALLOCATE_OBJ(obj_upvalue_t, OBJ_UPVALUE);
+obj_upvalue_t* new_upvalue(value_t* slot)
+{
+    obj_upvalue_t* upvalue = ALLOCATE_OBJ(obj_upvalue_t, OBJ_UPVALUE);
     upvalue->closed = NIL_VAL;
     upvalue->location = slot;
     upvalue->next = NULL;
@@ -60,16 +61,16 @@ obj_upvalue_t *new_upvalue(value_t *slot) {
 }
 
 /// @brief Creates a new closure object.
-/// @param function 
+/// @param function
 /// @return pointer to the object created
-obj_closure_t *new_closure(obj_func_t *function)
+obj_closure_t* new_closure(obj_func_t* function)
 {
-    obj_upvalue_t **upvalues = ALLOCATE(obj_upvalue_t*, function->upvalue_count);
-    
+    obj_upvalue_t** upvalues = ALLOCATE(obj_upvalue_t*, function->upvalue_count);
+
     for (int i = 0; i < function->upvalue_count; i++)
         upvalues[i] = NULL;
 
-    obj_closure_t *closure = ALLOCATE_OBJ(obj_closure_t, OBJ_CLOSURE);
+    obj_closure_t* closure = ALLOCATE_OBJ(obj_closure_t, OBJ_CLOSURE);
     closure->function = function;
     closure->upvalues = upvalues;
     closure->upvalue_count = function->upvalue_count;
@@ -79,9 +80,9 @@ obj_closure_t *new_closure(obj_func_t *function)
 
 /// @brief Creates a new Lox function.
 /// @return pointer to the object created
-obj_func_t *new_func()
+obj_func_t* new_func()
 {
-    obj_func_t *func = ALLOCATE_OBJ(obj_func_t, OBJ_FUNC);
+    obj_func_t* func = ALLOCATE_OBJ(obj_func_t, OBJ_FUNC);
     func->upvalue_count = 0;
     func->arity = 0;
     func->name = NULL;
@@ -94,9 +95,9 @@ obj_func_t *new_func()
 /// @brief Creates an object representing a new instance
 /// @param class instance's class
 /// @return pointer to the object created
-obj_instance_t *new_instance(obj_class_t *class)
+obj_instance_t* new_instance(obj_class_t* class)
 {
-    obj_instance_t *instance = ALLOCATE_OBJ(obj_instance_t, OBJ_INSTANCE);
+    obj_instance_t* instance = ALLOCATE_OBJ(obj_instance_t, OBJ_INSTANCE);
     instance->class = class;
 
     init_table(&instance->fields);
@@ -107,9 +108,9 @@ obj_instance_t *new_instance(obj_class_t *class)
 /// @brief Creates an object representing a native function.
 /// @param function given native
 /// @return pointer to the object created
-obj_native_t *new_native(native_fn_t function)
+obj_native_t* new_native(native_fn_t function)
 {
-    obj_native_t *native = ALLOCATE_OBJ(obj_native_t, OBJ_NATIVE);
+    obj_native_t* native = ALLOCATE_OBJ(obj_native_t, OBJ_NATIVE);
     native->function = function;
 
     return native;
@@ -120,9 +121,9 @@ obj_native_t *new_native(native_fn_t function)
 /// @param len string length
 /// @param hash string's hash code
 /// @return pointer to the object created
-static obj_str_t *allocate_str(char *chars, int len, uint32_t hash)
+static obj_str_t* allocate_str(char* chars, int len, uint32_t hash)
 {
-    obj_str_t *str = ALLOCATE_STR(len);
+    obj_str_t* str = ALLOCATE_STR(len);
     str->hash = hash;
     str->length = len;
     memcpy(str->chars, chars, len);
@@ -133,7 +134,7 @@ static obj_str_t *allocate_str(char *chars, int len, uint32_t hash)
     // Whenever a new string is created, it's added to the virtual machine's table.
     table_set(&vm.strings, str, NIL_VAL);
     pop();
-    
+
     return str;
 }
 
@@ -141,7 +142,7 @@ static obj_str_t *allocate_str(char *chars, int len, uint32_t hash)
 /// @param key string to be hashed
 /// @param len string length
 /// @return hash value for that specific key
-static uint32_t hash_str(const char *key, int len)
+static uint32_t hash_str(const char* key, int len)
 {
     uint32_t hash = 2166136261u;
 
@@ -157,10 +158,10 @@ static uint32_t hash_str(const char *key, int len)
 /// @param chars string content
 /// @param len string length
 /// @return pointer to the new objcet containing the string
-obj_str_t *take_str(char *chars, int len)
+obj_str_t* take_str(char* chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
-    obj_str_t *interned = table_find(&vm.strings, chars, len, hash);
+    obj_str_t* interned = table_find(&vm.strings, chars, len, hash);
 
     if (interned) {
         // Duplicate string is no longer needed.
@@ -176,16 +177,16 @@ obj_str_t *take_str(char *chars, int len)
 /// @param chars string literal
 /// @param len string length
 /// @return pointer to the object generated from that string
-obj_str_t *copy_str(const char *chars, int len)
+obj_str_t* copy_str(const char* chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
 
-    obj_str_t *interned = table_find(&vm.strings, chars, len, hash);
+    obj_str_t* interned = table_find(&vm.strings, chars, len, hash);
 
     if (interned)
         return interned;
 
-    char *heap_chars = ALLOCATE(char, len + 1);
+    char* heap_chars = ALLOCATE(char, len + 1);
     memcpy(heap_chars, chars, len);
 
     heap_chars[len] = '\0';
@@ -195,7 +196,7 @@ obj_str_t *copy_str(const char *chars, int len)
 
 /// @brief Prints the name of the given function object.
 /// @param func function object
-static void print_func(obj_func_t *func)
+static void print_func(obj_func_t* func)
 {
     if (!func->name) {
         printf("<script>");
@@ -209,26 +210,26 @@ static void print_func(obj_func_t *func)
 void print_obj(value_t value)
 {
     switch (OBJ_TYPE(value)) {
-        case OBJ_CLASS:
-            printf("%s", AS_CLASS(value)->name->chars);
-            break;
-        case OBJ_CLOSURE:
-            print_func(AS_CLOSURE(value)->function);
-            break;
-        case OBJ_FUNC:
-            print_func(AS_FUNC(value));
-            break;
-        case OBJ_INSTANCE: 
-            printf("%s instance", AS_INSTANCE(value)->class->name->chars);
-            break;
-        case OBJ_NATIVE:
-            printf("<native fn>");
-            break;
-        case OBJ_STR:
-            printf("%s", AS_CSTR(value));
-            break;
-        case OBJ_UPVALUE:
-            printf("upvalue");
-            break;
+    case OBJ_CLASS:
+        printf("%s", AS_CLASS(value)->name->chars);
+        break;
+    case OBJ_CLOSURE:
+        print_func(AS_CLOSURE(value)->function);
+        break;
+    case OBJ_FUNC:
+        print_func(AS_FUNC(value));
+        break;
+    case OBJ_INSTANCE:
+        printf("%s instance", AS_INSTANCE(value)->class->name->chars);
+        break;
+    case OBJ_NATIVE:
+        printf("<native fn>");
+        break;
+    case OBJ_STR:
+        printf("%s", AS_CSTR(value));
+        break;
+    case OBJ_UPVALUE:
+        printf("upvalue");
+        break;
     }
 }

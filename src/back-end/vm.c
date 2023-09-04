@@ -1,22 +1,22 @@
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
 #include "back-end/object.h"
 #include "back-end/vm.h"
 #include "common.h"
-#include "front-end/compiler.h"
 #include "debug.h"
+#include "front-end/compiler.h"
 #include "memory.h"
 
 vm_t vm; // FIXME: Should be manipulated through pointers.
 
 /// @brief Defines one of the native functions supported by the language.
-/// @param argc number of arguments 
+/// @param argc number of arguments
 /// @param argv pointer to the first argument
-/// @return elapsed time since the program started running. 
-static value_t clock_native(int argc, value_t *argv)
+/// @return elapsed time since the program started running.
+static value_t clock_native(int argc, value_t* argv)
 {
     return NUM_VAL((double)clock() / CLOCKS_PER_SEC);
 }
@@ -31,7 +31,7 @@ static void reset_stack()
 /// @brief Variadic function for runtime error reporting.
 /// @param format specifies the output string format
 /// @param params arguments to be printed according to the format
-static void runtime_err(const char *format, ...)
+static void runtime_err(const char* format, ...)
 {
     // Enables passing an arbitrary number of arguments to the function.
     va_list args;
@@ -42,8 +42,8 @@ static void runtime_err(const char *format, ...)
     fputs("\n", stderr);
     // Stack trace of each function executing when the error occurred.
     for (int i = vm.frame_count - 1; i >= 0; i--) {
-        call_frame_t *frame = &vm.frames[i];
-        obj_func_t *func = frame->closure->function;
+        call_frame_t* frame = &vm.frames[i];
+        obj_func_t* func = frame->closure->function;
         size_t instruction = frame->ip - func->chunk.code - 1;
 
         fprintf(stderr, "[line %d] in ", func->chunk.lines[instruction]);
@@ -61,11 +61,11 @@ static void runtime_err(const char *format, ...)
 /// @brief Defines a new native function exposed to the language.
 /// @param name function name
 /// @param function native function
-static void define_native(const char *name, native_fn_t function)
+static void define_native(const char* name, native_fn_t function)
 {
     push(OBJ_VAL(copy_str(name, (int)strlen(name))));
     push(OBJ_VAL(new_native(function)));
-    
+
     table_set(&vm.globals, AS_STR(vm.stack[0]), vm.stack[1]);
 }
 
@@ -81,7 +81,7 @@ static value_t peek(int offset)
 /// @param func closure being called (all functions are closures)
 /// @param args amount of arguments supported
 /// @return status of successfully initialized frame
-static bool init_frame(obj_closure_t *closure, int args)
+static bool init_frame(obj_closure_t* closure, int args)
 {
     // The overlapping stack windows work based on the assumption
     // that a call passes exactly one argument for each of the
@@ -98,8 +98,8 @@ static bool init_frame(obj_closure_t *closure, int args)
         return false;
     }
 
-    call_frame_t *frame = &vm.frames[vm.frame_count++];
-    
+    call_frame_t* frame = &vm.frames[vm.frame_count++];
+
     frame->closure = closure;
     frame->ip = closure->function->chunk.code;
     // Provides the window into the stack for the new frame,
@@ -118,27 +118,27 @@ static bool call_value(value_t callee, int args)
 {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
-            // If the value being called is a class, then it
-            // is treated as a constructor call.
-            case OBJ_CLASS: {
-                obj_class_t *class = AS_CLASS(callee);
-                vm.stack_top[-args - 1] = OBJ_VAL(new_instance(class));
+        // If the value being called is a class, then it
+        // is treated as a constructor call.
+        case OBJ_CLASS: {
+            obj_class_t* class = AS_CLASS(callee);
+            vm.stack_top[-args - 1] = OBJ_VAL(new_instance(class));
 
-                return true;
-            }
-            case OBJ_CLOSURE:
-                return init_frame(AS_CLOSURE(callee), args);
-            case OBJ_NATIVE: {
-                native_fn_t native = AS_NATIVE(callee);
-                value_t result = native(args, vm.stack_top - args);
+            return true;
+        }
+        case OBJ_CLOSURE:
+            return init_frame(AS_CLOSURE(callee), args);
+        case OBJ_NATIVE: {
+            native_fn_t native = AS_NATIVE(callee);
+            value_t result = native(args, vm.stack_top - args);
 
-                vm.stack_top -= args + 1;
-                push(result);
+            vm.stack_top -= args + 1;
+            push(result);
 
-                return true;
-            }
-            default:
-                break; // Non-callable object type.
+            return true;
+        }
+        default:
+            break; // Non-callable object type.
         }
     }
     runtime_err("Only function and classes can be called");
@@ -149,10 +149,10 @@ static bool call_value(value_t callee, int args)
 /// @brief Closes over a local variable from the surrounding function.
 /// @param local pointer to the captured local's slot
 /// @return pointer to the upvalue object created
-static obj_upvalue_t *capture_upvalue(value_t *local)
+static obj_upvalue_t* capture_upvalue(value_t* local)
 {
-    obj_upvalue_t *prev_upvalue = NULL;
-    obj_upvalue_t *curr_upvalue = vm.open_upvalues;
+    obj_upvalue_t* prev_upvalue = NULL;
+    obj_upvalue_t* curr_upvalue = vm.open_upvalues;
 
     while (curr_upvalue && curr_upvalue->location > local) {
         prev_upvalue = curr_upvalue;
@@ -162,7 +162,7 @@ static obj_upvalue_t *capture_upvalue(value_t *local)
     if (curr_upvalue && curr_upvalue->location == local)
         return curr_upvalue;
 
-    obj_upvalue_t *upvalue = new_upvalue(local);
+    obj_upvalue_t* upvalue = new_upvalue(local);
     upvalue->next = curr_upvalue;
 
     if (!prev_upvalue) {
@@ -176,19 +176,19 @@ static obj_upvalue_t *capture_upvalue(value_t *local)
 
 /// @brief Closes every open upvalue pointing to the given slot.
 /// @param last pointer to a stack slot
-static void close_upvalues(value_t *last) 
+static void close_upvalues(value_t* last)
 {
     while (vm.open_upvalues && vm.open_upvalues->location >= last) {
-        obj_upvalue_t *upvalue = vm.open_upvalues;
+        obj_upvalue_t* upvalue = vm.open_upvalues;
         upvalue->closed = *upvalue->location;
         upvalue->location = &upvalue->closed;
-        
+
         vm.open_upvalues = upvalue->next;
     }
 }
 
 /// @brief Checks if the specified value has a false behaviour.
-/// @param value 
+/// @param value
 /// @return whether the value is true or not
 static bool is_falsey(value_t value)
 {
@@ -203,17 +203,17 @@ static void concat()
     // maintain a reference to those objects so they can be reached
     // in the marking process, they are peeked instead of popped
     // from the stack.
-    obj_str_t *b = AS_STR(peek(0));
-    obj_str_t *a = AS_STR(peek(1));
+    obj_str_t* b = AS_STR(peek(0));
+    obj_str_t* a = AS_STR(peek(1));
 
     int len = a->length + b->length;
-    char *chars = ALLOCATE(char, len + 1);
+    char* chars = ALLOCATE(char, len + 1);
 
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[len] = '\0';
 
-    obj_str_t *result = take_str(chars, len);
+    obj_str_t* result = take_str(chars, len);
 
     pop();
     pop();
@@ -222,7 +222,7 @@ static void concat()
 
 static interpret_result_t run()
 {
-    call_frame_t *frame = &vm.frames[vm.frame_count - 1];
+    call_frame_t* frame = &vm.frames[vm.frame_count - 1];
 // Reads the byte currently pointed at and advances the frame's ip.
 #define READ_BYTE() (*frame->ip++)
 // Reads the next two bytes from the chunk, building a 16-bit unsigned integer.
@@ -235,22 +235,22 @@ static interpret_result_t run()
 // Returns a string at a specific index in the constant table.
 #define READ_STR() AS_STR(READ_CONSTANT())
 // Executes numerical infix operations, pushing the result into the stack.
-#define BINARY_OP(value_type, op)                       \
-    do {                                                \
-        if (!IS_NUM(peek(0)) || !IS_NUM(peek(1))) {     \
-            runtime_err("Operands must be numbers");    \
-            return INTERPRET_RUNTIME_ERROR;             \
-        }                                               \
-        double b = AS_NUM(pop());                       \
-        double a = AS_NUM(pop());                       \
-        push(value_type(a op b));                       \
+#define BINARY_OP(value_type, op)                    \
+    do {                                             \
+        if (!IS_NUM(peek(0)) || !IS_NUM(peek(1))) {  \
+            runtime_err("Operands must be numbers"); \
+            return INTERPRET_RUNTIME_ERROR;          \
+        }                                            \
+        double b = AS_NUM(pop());                    \
+        double a = AS_NUM(pop());                    \
+        push(value_type(a op b));                    \
     } while (false); // Ensures that all statements are within the same scope.
 
     while (true) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("          ");
 
-        for (value_t *v = vm.stack; v < vm.stack_top; v++) {
+        for (value_t* v = vm.stack; v < vm.stack_top; v++) {
             printf("[ ");
             print_value(*v);
             printf(" ]");
@@ -262,248 +262,248 @@ static interpret_result_t run()
 #endif
         uint8_t instruction;
 
-        switch(instruction = READ_BYTE()) {
-           case OP_CONSTANT:
-                push(READ_CONSTANT());
-                break;
-            case OP_NIL:
-                push(NIL_VAL);
-                break;
-            case OP_TRUE:
-                push(BOOL_VAL(true));
-                break;
-            case OP_FALSE:
-                push(BOOL_VAL(false));
-                break;
-            case OP_POP:
-                pop();
-                break;
-            case OP_GET_LOCAL: {
-                uint8_t slot = READ_BYTE();
-                push(frame->slots[slot]);
-                break;
-            }
-            case OP_SET_LOCAL: {
-                uint8_t slot = READ_BYTE();
-                frame->slots[slot] = peek(0);
-                break;
-            }
-            case OP_GLOBAL: {
-                obj_str_t *name = READ_STR();
+        switch (instruction = READ_BYTE()) {
+        case OP_CONSTANT:
+            push(READ_CONSTANT());
+            break;
+        case OP_NIL:
+            push(NIL_VAL);
+            break;
+        case OP_TRUE:
+            push(BOOL_VAL(true));
+            break;
+        case OP_FALSE:
+            push(BOOL_VAL(false));
+            break;
+        case OP_POP:
+            pop();
+            break;
+        case OP_GET_LOCAL: {
+            uint8_t slot = READ_BYTE();
+            push(frame->slots[slot]);
+            break;
+        }
+        case OP_SET_LOCAL: {
+            uint8_t slot = READ_BYTE();
+            frame->slots[slot] = peek(0);
+            break;
+        }
+        case OP_GLOBAL: {
+            obj_str_t* name = READ_STR();
 
-                table_set(&vm.globals, name, peek(0));
-                pop();
-                break;
-            }
-            case OP_SET_GLOBAL: {
-                obj_str_t *name = READ_STR();
+            table_set(&vm.globals, name, peek(0));
+            pop();
+            break;
+        }
+        case OP_SET_GLOBAL: {
+            obj_str_t* name = READ_STR();
 
-                if (table_set(&vm.globals, name, peek(0))) {
-                    table_delete(&vm.globals, name);
-                    runtime_err("Undefined variable '%s'.", name->chars);
-
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            }
-            case OP_GET_GLOBAL: {
-                obj_str_t *name = READ_STR();
-                value_t value;
-
-                if (!table_get(&vm.globals, name, &value)) {
-                    runtime_err("Undefined variable '%s'.", name->chars);
-
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(value);
-                break;
-            }
-            case OP_GET_UPVALUE: {
-                // Index into the current function's upvalue array.
-                uint8_t slot = READ_BYTE();
-                // Looks up the correspondent upvalue and dereference
-                // its location pointer to read the value in that slot.
-                push(*frame->closure->upvalues[slot]->location);
-                break;
-            }
-            case OP_SET_UPVALUE: {
-                uint8_t slot = READ_BYTE();
-                // Takes the value at the top of the stack and store it
-                // into the slot pointed to by the chosen upvalue.
-                *frame->closure->upvalues[slot]->location = peek(0);
-                break;
-            }
-            case OP_GET_PROPERTY: {
-                // Only instances are allowed to have fields. So there's
-                // the need to check that the value is an instance before
-                // accessing any fields on it.
-                if (!IS_INSTANCE(peek(0))) {
-                    runtime_err("Only instances have properties.");
-
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                obj_instance_t *instance = AS_INSTANCE(peek(0));
-                obj_str_t *name = READ_STR();
-
-                value_t value;
-
-                if (table_get(&instance->fields, name, &value)) {
-                    pop(); /* instance */
-                    push(value);
-                    break;
-                }
-                // In case a field is not defined for the given instance.  
-                runtime_err("Undefined property '%s'.", name->chars);
+            if (table_set(&vm.globals, name, peek(0))) {
+                table_delete(&vm.globals, name);
+                runtime_err("Undefined variable '%s'.", name->chars);
 
                 return INTERPRET_RUNTIME_ERROR;
             }
-            case OP_SET_PROPERTY: {
-                // Storing data on a field of a value that is not an
-                // instance is considered an error.
-                if (!IS_INSTANCE(peek(1))) {
-                    runtime_err("Only instances have fields.");
+            break;
+        }
+        case OP_GET_GLOBAL: {
+            obj_str_t* name = READ_STR();
+            value_t value;
 
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                // At this point, the top of the stack has the instance
-                // whose field is being sest and above that, the value
-                // to be stored. The operand is read and the field name
-                // string is determined. With that, the value on top of
-                // the stack is stored into the instance's field table.
-                obj_instance_t *instance = AS_INSTANCE(peek(1));
-                table_set(&instance->fields, READ_STR(), peek(0));
+            if (!table_get(&vm.globals, name, &value)) {
+                runtime_err("Undefined variable '%s'.", name->chars);
 
-                value_t value = pop();
-                pop();
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            push(value);
+            break;
+        }
+        case OP_GET_UPVALUE: {
+            // Index into the current function's upvalue array.
+            uint8_t slot = READ_BYTE();
+            // Looks up the correspondent upvalue and dereference
+            // its location pointer to read the value in that slot.
+            push(*frame->closure->upvalues[slot]->location);
+            break;
+        }
+        case OP_SET_UPVALUE: {
+            uint8_t slot = READ_BYTE();
+            // Takes the value at the top of the stack and store it
+            // into the slot pointed to by the chosen upvalue.
+            *frame->closure->upvalues[slot]->location = peek(0);
+            break;
+        }
+        case OP_GET_PROPERTY: {
+            // Only instances are allowed to have fields. So there's
+            // the need to check that the value is an instance before
+            // accessing any fields on it.
+            if (!IS_INSTANCE(peek(0))) {
+                runtime_err("Only instances have properties.");
+
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            obj_instance_t* instance = AS_INSTANCE(peek(0));
+            obj_str_t* name = READ_STR();
+
+            value_t value;
+
+            if (table_get(&instance->fields, name, &value)) {
+                pop(); /* instance */
                 push(value);
                 break;
             }
-            case OP_EQUAL: {
-                value_t b = pop();
-                value_t a = pop();
+            // In case a field is not defined for the given instance.
+            runtime_err("Undefined property '%s'.", name->chars);
 
-                push(BOOL_VAL(values_equal(a, b)));
-                break;
-            }
-            case OP_GREATER:
-                BINARY_OP(BOOL_VAL, >);
-                break;
-            case OP_LESS:
-                BINARY_OP(BOOL_VAL, <);
-                break;
-            case OP_ADD: {
-                if (!IS_STR(peek(0)) && !IS_STR(peek(1))) {
-                    BINARY_OP(NUM_VAL, +);
-                } else {
-                    concat();
-                }
-                break;
-            }
-            case OP_SUBTRACT:
-                BINARY_OP(NUM_VAL, -);
-                break;
-            case OP_MULTIPLY:
-                BINARY_OP(NUM_VAL, *);
-                break;
-            case OP_DIVIDE:
-                BINARY_OP(NUM_VAL, /);
-                break;
-            case OP_NOT:
-                push(BOOL_VAL(is_falsey(pop())));
-                break;
-            case OP_NEGATE: {
-                if (!IS_NUM(peek(0))) {
-                    runtime_err("Operand must be a number.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+        case OP_SET_PROPERTY: {
+            // Storing data on a field of a value that is not an
+            // instance is considered an error.
+            if (!IS_INSTANCE(peek(1))) {
+                runtime_err("Only instances have fields.");
 
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(NUM_VAL(-AS_NUM(pop())));
-                break;
+                return INTERPRET_RUNTIME_ERROR;
             }
-            case OP_PRINT: {
-                print_value(pop());
-                printf("\n");
-                break;
+            // At this point, the top of the stack has the instance
+            // whose field is being sest and above that, the value
+            // to be stored. The operand is read and the field name
+            // string is determined. With that, the value on top of
+            // the stack is stored into the instance's field table.
+            obj_instance_t* instance = AS_INSTANCE(peek(1));
+            table_set(&instance->fields, READ_STR(), peek(0));
+
+            value_t value = pop();
+            pop();
+            push(value);
+            break;
+        }
+        case OP_EQUAL: {
+            value_t b = pop();
+            value_t a = pop();
+
+            push(BOOL_VAL(values_equal(a, b)));
+            break;
+        }
+        case OP_GREATER:
+            BINARY_OP(BOOL_VAL, >);
+            break;
+        case OP_LESS:
+            BINARY_OP(BOOL_VAL, <);
+            break;
+        case OP_ADD: {
+            if (!IS_STR(peek(0)) && !IS_STR(peek(1))) {
+                BINARY_OP(NUM_VAL, +);
+            } else {
+                concat();
             }
-            case OP_JUMP: {
-                uint16_t offset = READ_SHORT();
+            break;
+        }
+        case OP_SUBTRACT:
+            BINARY_OP(NUM_VAL, -);
+            break;
+        case OP_MULTIPLY:
+            BINARY_OP(NUM_VAL, *);
+            break;
+        case OP_DIVIDE:
+            BINARY_OP(NUM_VAL, /);
+            break;
+        case OP_NOT:
+            push(BOOL_VAL(is_falsey(pop())));
+            break;
+        case OP_NEGATE: {
+            if (!IS_NUM(peek(0))) {
+                runtime_err("Operand must be a number.");
+
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            push(NUM_VAL(-AS_NUM(pop())));
+            break;
+        }
+        case OP_PRINT: {
+            print_value(pop());
+            printf("\n");
+            break;
+        }
+        case OP_JUMP: {
+            uint16_t offset = READ_SHORT();
+            frame->ip += offset;
+            break;
+        }
+        case OP_JUMP_FALSE: {
+            uint16_t offset = READ_SHORT();
+
+            if (is_falsey(peek(0)))
                 frame->ip += offset;
-                break;
-            }
-            case OP_JUMP_FALSE: {
-                uint16_t offset = READ_SHORT();
 
-                if (is_falsey(peek(0)))
-                    frame->ip += offset;
-                    
-                break;
-            }
-            case OP_LOOP: {
-                uint16_t offset = READ_SHORT();
-                frame->ip -= offset;
-                break;
-            }
-            case OP_CALL: {
-                int args = READ_BYTE();
+            break;
+        }
+        case OP_LOOP: {
+            uint16_t offset = READ_SHORT();
+            frame->ip -= offset;
+            break;
+        }
+        case OP_CALL: {
+            int args = READ_BYTE();
 
-                if (!call_value(peek(args), args))
-                    return INTERPRET_RUNTIME_ERROR;
+            if (!call_value(peek(args), args))
+                return INTERPRET_RUNTIME_ERROR;
 
-                frame = &vm.frames[vm.frame_count - 1];
-                break;
-            }
-            case OP_CLOSURE: {
-                obj_func_t *function = AS_FUNC(READ_CONSTANT());
-                obj_closure_t *closure = new_closure(function);
+            frame = &vm.frames[vm.frame_count - 1];
+            break;
+        }
+        case OP_CLOSURE: {
+            obj_func_t* function = AS_FUNC(READ_CONSTANT());
+            obj_closure_t* closure = new_closure(function);
 
-                push(OBJ_VAL(closure));
-                for (int i = 0; i < closure->upvalue_count; i++) {
-                    uint8_t is_local = READ_BYTE();
-                    uint8_t index = READ_BYTE();
+            push(OBJ_VAL(closure));
+            for (int i = 0; i < closure->upvalue_count; i++) {
+                uint8_t is_local = READ_BYTE();
+                uint8_t index = READ_BYTE();
 
-                    if (is_local) {
-                        // Here, `capture_value` takes a pointer to the local's slot
-                        // in the surrounding function's stack window. That window
-                        // begins at `frame->slots` which points to slot zero.
-                        // Adding `index` offsets that to the right slot.
-                        closure->upvalues[i] = capture_upvalue(frame->slots + index);
-                    } else {
-                        // At the moment a function's declaration is being executed,
-                        // the current function is the surrounding one. So, the
-                        // upvalue from the enclosing function is directly read from
-                        // `frame`. 
-                        closure->upvalues[i] = frame->closure->upvalues[index];
-                    }
+                if (is_local) {
+                    // Here, `capture_value` takes a pointer to the local's slot
+                    // in the surrounding function's stack window. That window
+                    // begins at `frame->slots` which points to slot zero.
+                    // Adding `index` offsets that to the right slot.
+                    closure->upvalues[i] = capture_upvalue(frame->slots + index);
+                } else {
+                    // At the moment a function's declaration is being executed,
+                    // the current function is the surrounding one. So, the
+                    // upvalue from the enclosing function is directly read from
+                    // `frame`.
+                    closure->upvalues[i] = frame->closure->upvalues[index];
                 }
-
-                break;
             }
-            case OP_CLOSE_UPVALUE: {
-                close_upvalues(vm.stack_top - 1);
+
+            break;
+        }
+        case OP_CLOSE_UPVALUE: {
+            close_upvalues(vm.stack_top - 1);
+            pop();
+            break;
+        }
+        case OP_CLASS: {
+            push(OBJ_VAL(new_class(READ_STR())));
+            break;
+        }
+        case OP_RETURN: {
+            value_t result = pop();
+            // Closes variables defined in the context of the function's scope,
+            // such as it's parameters or locals declared inside its body.
+            close_upvalues(frame->slots);
+            vm.frame_count--;
+
+            if (vm.frame_count == 0) {
                 pop();
-                break;
+                return INTERPRET_OK;
             }
-            case OP_CLASS: {
-                push(OBJ_VAL(new_class(READ_STR())));
-                break;
-            }
-            case OP_RETURN: {
-                value_t result = pop();
-                // Closes variables defined in the context of the function's scope,
-                // such as it's parameters or locals declared inside its body.
-                close_upvalues(frame->slots);
-                vm.frame_count--;
 
-                if (vm.frame_count == 0) {
-                    pop();
-                    return INTERPRET_OK;
-                }
-
-                vm.stack_top = frame->slots;
-                push(result);
-                frame = &vm.frames[vm.frame_count - 1];
-                break;
-            }
+            vm.stack_top = frame->slots;
+            push(result);
+            frame = &vm.frames[vm.frame_count - 1];
+            break;
+        }
         }
     }
 #undef READ_BYTE
@@ -551,16 +551,16 @@ value_t pop()
     return *vm.stack_top;
 }
 
-interpret_result_t interpret(const char *source)
+interpret_result_t interpret(const char* source)
 {
-    obj_func_t *func = compile(source);
+    obj_func_t* func = compile(source);
 
     if (!func)
         return INTERPRET_COMPILE_ERROR;
 
     push(OBJ_VAL(func));
 
-    obj_closure_t *closure = new_closure(func);
+    obj_closure_t* closure = new_closure(func);
 
     pop();
     push(OBJ_VAL(closure));

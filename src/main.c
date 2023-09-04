@@ -23,9 +23,9 @@ void repl()
     }
 }
 
-char *read_file(const char *path)
+char* read_file(const char* path)
 {
-    FILE *file = fopen(path, "rb");
+    FILE* file = fopen(path, "rb");
 
     if (!file) {
         fprintf(stderr, "Could not open file \"%s\".\n", path);
@@ -36,7 +36,7 @@ char *read_file(const char *path)
     size_t file_size = ftell(file);
     rewind(file);
 
-    char *buffer = (char *)malloc(file_size + 1);
+    char* buffer = (char*)malloc(file_size + 1);
 
     if (!buffer) {
         fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
@@ -56,9 +56,9 @@ char *read_file(const char *path)
     return buffer;
 }
 
-void run_file(const char *path)
+void run_file(const char* path)
 {
-    char *source = read_file(path);
+    char* source = read_file(path);
     interpret_result_t result = interpret(source);
     free(source);
 
@@ -70,7 +70,7 @@ void run_file(const char *path)
         exit(70);
 }
 
-int main(int argc, const char *argv[])
+int main(int argc, const char* argv[])
 {
     init_vm();
 
@@ -82,7 +82,7 @@ int main(int argc, const char *argv[])
         fprintf(stderr, "Usage: clox [path]\n");
         exit(64);
     }
-    
+
     free_vm();
     return 0;
 }

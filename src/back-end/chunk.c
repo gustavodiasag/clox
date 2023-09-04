@@ -4,7 +4,7 @@
 #include "back-end/vm.h"
 #include "memory.h"
 
-void init_chunk(chunk_t *chunk)
+void init_chunk(chunk_t* chunk)
 {
     chunk->count = 0;
     chunk->capacity = 0;
@@ -13,7 +13,7 @@ void init_chunk(chunk_t *chunk)
     init_value_array(&chunk->constants);
 }
 
-void free_chunk(chunk_t *chunk)
+void free_chunk(chunk_t* chunk)
 {
     FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
     FREE_ARRAY(int, chunk->lines, chunk->capacity);
@@ -21,7 +21,7 @@ void free_chunk(chunk_t *chunk)
     init_chunk(chunk);
 }
 
-void write_chunk(chunk_t *chunk, uint8_t byte, int line)
+void write_chunk(chunk_t* chunk, uint8_t byte, int line)
 {
     if (chunk->capacity < chunk->count + 1) {
         int old_capacity = chunk->capacity;
@@ -36,7 +36,7 @@ void write_chunk(chunk_t *chunk, uint8_t byte, int line)
 }
 
 // Adds the constant and returns the index where the constant was appended.
-int add_constant(chunk_t *chunk, value_t value)
+int add_constant(chunk_t* chunk, value_t value)
 {
     // When writing the value to the chunk's constant table, there may be
     // necessary for the dynamic array to grow it's size, which could
