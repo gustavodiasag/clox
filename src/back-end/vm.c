@@ -40,7 +40,6 @@ static void runtime_err(const char *format, ...)
     vfprintf(stderr, format, args);
     va_end(args);
     fputs("\n", stderr);
-
     // Stack trace of each function executing when the error occurred.
     for (int i = vm.frame_count - 1; i >= 0; i--) {
         call_frame_t *frame = &vm.frames[i];

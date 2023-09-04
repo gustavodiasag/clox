@@ -44,9 +44,9 @@ static entry_t *find_entry(entry_t *entries, int size, obj_str_t *key)
                 if (!tombstone)
                     tombstone = entry;
             }
-        } else if (entry->key == key)
+        } else if (entry->key == key) {
             return entry;
-
+        }
         // Collision handling.
         index = (index + 1) % size;
     }

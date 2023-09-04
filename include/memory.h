@@ -15,7 +15,7 @@
     (type *)reallocate(ptr, sizeof(type) * old_count,   \
         sizeof(type) * new_count)
 
-// Wrapper around `reallocate()` that resizes an allocation
+// Wrapper around `reallocate` that resizes an allocation
 // down to zero bytes.
 #define FREE(type, ptr) \
     reallocate(ptr, sizeof(type), 0)
