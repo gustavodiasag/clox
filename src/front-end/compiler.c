@@ -603,6 +603,44 @@ static uint8_t parse_var(const char *error)
     return identifier_const(&parser.previous);
 }
 
+/// @brief Generates the instruction to load a variable with that name.
+/// @param name variable name
+/// @param can_assign whether to consider assigment or not
+static void named_variable(token_t name, bool can_assign)
+{
+    uint8_t get_op, set_op;
+    int var = resolve_local(current, &name);
+
+    if (var != -1) {
+        get_op = OP_GET_LOCAL;
+        set_op = OP_SET_LOCAL;
+    } else if ((var = resolve_upvalue(current, &name)) != -1) {
+        get_op = OP_GET_UPVALUE;
+        set_op = OP_SET_UPVALUE;
+    } else {
+        var = identifier_const(&name);
+        get_op = OP_GET_GLOBAL;
+        set_op = OP_SET_GLOBAL;
+    }
+
+    // If an attribution operator is found, instead of emmiting code for a
+    // variable access, the assigned value is compiled and an assignment
+    // instruction is generated instead.  
+    if (can_assign && match(TOKEN_EQUAL)) {
+        expression();
+        emit_bytes(set_op, (uint8_t)var);
+    } else {
+        emit_bytes(get_op, (uint8_t)var);
+    }
+}
+
+/// @brief Parses a variable.
+/// @param can_assign whether to consider assigment or not
+static void variable(bool can_assign)
+{
+    named_variable(parser.previous, can_assign);
+}
+
 /// @brief Parses an expression.
 static void expression()
 {
@@ -667,17 +705,47 @@ static void function(func_type_t type)
     }
 }
 
+/// @brief Emits the required bytecode for instantiating a class's method.
+static void method() {
+    consume(TOKEN_IDENTIFIER, "Expect method name.");
+
+    uint8_t constant = identifier_const(&parser.previous);
+
+    func_type_t type = TYPE_FUNC;
+    // Emits the code to create a closure object and leave it on top of
+    // the stack at runtime.
+    function(type);
+
+    emit_bytes(OP_METHOD, constant);
+}
+
 static void class_declaration()
 {
     consume(TOKEN_IDENTIFIER, "Expect class name.");
+    token_t class_name = parser.previous;
+
     uint8_t name = identifier_const(&parser.previous);
     declare_var();
 
     emit_bytes(OP_CLASS, name);
     define_var(name);
+    // Generates code to load a variable with the given name onto the
+    // stack. This is useful because it provides a way to reference
+    // the class when parsing its methods so that they can be
+    // properly binded to the object.
+    named_variable(class_name, false);
 
     consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+    // The language does not have field declaration, so anything before
+    // the closing brace must be a method.
+    while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+        method();
+    }
+
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+    // Considering that a declaration is being parsed, all values
+    // stored in the stack during it must be popped out.
+    emit_byte(OP_POP);
 }
 
 /// @brief Stores a function as a newly declared variable (first-class function).
@@ -927,44 +995,6 @@ static void number(bool can_assign)
 static void string(bool can_assign)
 {
     emit_constant(OBJ_VAL(copy_str(parser.previous.start + 1, parser.previous.length - 2)));
-}
-
-/// @brief Generates the instruction to load a variable with that name.
-/// @param name variable name
-/// @param can_assign whether to consider assigment or not
-static void named_variable(token_t name, bool can_assign)
-{
-    uint8_t get_op, set_op;
-    int var = resolve_local(current, &name);
-
-    if (var != -1) {
-        get_op = OP_GET_LOCAL;
-        set_op = OP_SET_LOCAL;
-    } else if ((var = resolve_upvalue(current, &name)) != -1) {
-        get_op = OP_GET_UPVALUE;
-        set_op = OP_SET_UPVALUE;
-    } else {
-        var = identifier_const(&name);
-        get_op = OP_GET_GLOBAL;
-        set_op = OP_SET_GLOBAL;
-    }
-
-    // If an attribution operator is found, instead of emmiting code for a
-    // variable access, the assigned value is compiled and an assignment
-    // instruction is generated instead.  
-    if (can_assign && match(TOKEN_EQUAL)) {
-        expression();
-        emit_bytes(set_op, (uint8_t)var);
-    } else {
-        emit_bytes(get_op, (uint8_t)var);
-    }
-}
-
-/// @brief Parses a variable.
-/// @param can_assign whether to consider assigment or not
-static void variable(bool can_assign)
-{
-    named_variable(parser.previous, can_assign);
 }
 
 /// @brief Parses an expression between parenthesis, consuming the closing one.
