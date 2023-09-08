@@ -187,6 +187,17 @@ static void close_upvalues(value_t* last)
     }
 }
 
+/// @brief Stores the closure for a method in the class's method table
+/// @param name method
+static void define_method(obj_str_t *name)
+{
+    value_t method = peek(0);
+    obj_class_t *class = AS_CLASS(peek(1));
+
+    table_set(&class->methods, name, method);
+    pop();
+}
+
 /// @brief Checks if the specified value has a false behaviour.
 /// @param value
 /// @return whether the value is true or not
@@ -502,6 +513,10 @@ static interpret_result_t run()
             vm.stack_top = frame->slots;
             push(result);
             frame = &vm.frames[vm.frame_count - 1];
+            break;
+        }
+        case OP_METHOD: {
+            define_method(READ_STR());
             break;
         }
         }
