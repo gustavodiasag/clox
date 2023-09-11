@@ -146,6 +146,26 @@ static bool call_value(value_t callee, int args)
     return false;
 }
 
+/// @brief TODO: describe function.
+/// @param  
+/// @param name 
+/// @return 
+static bool bind_method(obj_class_t* class, obj_str_t* name)
+{
+    value_t method;
+
+    if (!table_get(&class->methods, name, &method)) {
+        runtime_err("Undefined property '%s'.", name->chars);
+        return false;
+    }
+
+    obj_bound_method_t* bound = new_bound_method(peek(0), AS_CLOSURE(method));
+    pop();
+    push(OBJ_VAL(bound));
+
+    return true;
+}
+
 /// @brief Closes over a local variable from the surrounding function.
 /// @param local pointer to the captured local's slot
 /// @return pointer to the upvalue object created
@@ -363,10 +383,13 @@ static interpret_result_t run()
                 push(value);
                 break;
             }
-            // In case a field is not defined for the given instance.
-            runtime_err("Undefined property '%s'.", name->chars);
-
-            return INTERPRET_RUNTIME_ERROR;
+            // Fields take proprity over methods, shadowing them,
+            // if the instance doesn't have a field with the
+            // property name, then it might refer to a method.
+            if (!bind_method(instance->class, name)) {
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            break;
         }
         case OP_SET_PROPERTY: {
             // Storing data on a field of a value that is not an
