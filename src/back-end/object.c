@@ -35,6 +35,19 @@ static obj_t* allocate_obj(size_t size, obj_type_t type)
     return obj;
 }
 
+/// @brief Creates a new bounded method object.
+/// @param receiver variable receiving the method
+/// @param method method clojure
+/// @return pointer to the object created
+obj_bound_method_t* new_bound_method(value_t receiver, obj_closure_t* method)
+{
+    obj_bound_method_t* bound = ALLOCATE_OBJ(obj_bound_method_t, OBJ_BOUND_METHOD);
+    bound->receiver = receiver;
+    bound->method = method;
+
+    return bound;
+}
+
 /// @brief Creates a new class object
 /// @param name class' name
 /// @return pointer to the object created
@@ -210,6 +223,9 @@ static void print_func(obj_func_t* func)
 void print_obj(value_t value)
 {
     switch (OBJ_TYPE(value)) {
+    case OBJ_BOUND_METHOD:
+        print_func(AS_BOUND_METHOD(value)->method->function);
+        break;
     case OBJ_CLASS:
         printf("%s", AS_CLASS(value)->name->chars);
         break;

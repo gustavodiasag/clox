@@ -73,6 +73,12 @@ static void blacken_object(obj_t* obj)
     // A black object is any object whose `is_marked` field is
     // set and that is no longer in the gray stack.
     switch (obj->type) {
+    case OBJ_BOUND_METHOD: {
+        obj_bound_method_t* bound = (obj_bound_method_t*) obj;
+        mark_value(bound->receiver);
+        mark_object(bound->method);
+        break;
+    }
     case OBJ_CLASS: {
         obj_class_t* class = (obj_class_t*)obj;
         mark_object((obj_t*)class->name);

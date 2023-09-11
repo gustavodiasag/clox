@@ -50,6 +50,10 @@ void free_obj(obj_t* obj)
 #endif
 
     switch (obj->type) {
+    case OBJ_BOUND_METHOD: {
+        FREE(obj_bound_method_t obj);
+        break;
+    }
     case OBJ_CLASS: {
         obj_class_t* class = (obj_class_t*)obj;
         // The class object owns the memory for the method table,
