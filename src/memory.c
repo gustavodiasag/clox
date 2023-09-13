@@ -51,7 +51,7 @@ void free_obj(obj_t* obj)
 
     switch (obj->type) {
     case OBJ_BOUND_METHOD: {
-        FREE(obj_bound_method_t obj);
+        FREE(obj_bound_method_t, obj);
         break;
     }
     case OBJ_CLASS: {
