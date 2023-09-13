@@ -118,6 +118,11 @@ static bool call_value(value_t callee, int args)
 {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
+        case OBJ_BOUND_METHOD: {
+            obj_bound_method_t* bound = AS_BOUND_METHOD(callee);
+            
+            return init_frame(bound->method, args);
+        }
         // If the value being called is a class, then it
         // is treated as a constructor call.
         case OBJ_CLASS: {
@@ -146,10 +151,10 @@ static bool call_value(value_t callee, int args)
     return false;
 }
 
-/// @brief TODO: describe function.
-/// @param  
-/// @param name 
-/// @return 
+/// @brief Places the given method in the runtime stack.
+/// @param class contains the method table
+/// @param name method name
+/// @return whether the method was found in the table
 static bool bind_method(obj_class_t* class, obj_str_t* name)
 {
     value_t method;
