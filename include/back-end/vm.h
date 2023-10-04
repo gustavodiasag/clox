@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VM_H
+#define VM_H
 
 #include "chunk.h"
 #include "object.h"
@@ -65,3 +66,5 @@ void free_vm();
 interpret_result_t interpret(const char* source);
 void push(value_t value);
 value_t pop();
+
+#endif

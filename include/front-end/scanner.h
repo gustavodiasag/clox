@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SCANNER_H
+#define SCANNER_H
 
 #include "token.h"
 
@@ -13,3 +14,5 @@ typedef struct {
 
 void init_scanner(const char* source);
 token_t scan_token();
+
+#endif

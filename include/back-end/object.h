@@ -1,4 +1,5 @@
-#pragma once
+#ifndef OBJECT_H
+#define OBJECT_H
 
 #include "chunk.h"
 #include "common.h"
@@ -157,3 +158,5 @@ static inline bool is_obj_type(value_t value, obj_type_t type)
     // is expanded, the evaluation can lead to incorrect behaviour.
     return IS_OBJ(value) && AS_OBJ(value)->type == type;
 }
+
+#endif

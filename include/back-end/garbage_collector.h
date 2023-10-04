@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GARBAGE_COLLECTOR_H
+#define GARBAGE_COLLECTOR_H
 
 #include "vm.h"
 
@@ -7,3 +8,5 @@ void mark_value(value_t value);
 void table_remove_white(table_t* table);
 void mark_table(table_t* table);
 void collect_garbage();
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TABLE_H
+#define TABLE_H
 
 #include "common.h"
 #include "value.h"
@@ -26,3 +27,5 @@ bool table_set(table_t* table, obj_str_t* key, value_t value);
 bool table_delete(table_t* table, obj_str_t* key);
 void add_all(table_t* src, table_t* dest);
 obj_str_t* table_find(table_t* table, const char* chars, int len, uint32_t hash);
+
+#endif

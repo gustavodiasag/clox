@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VALUE_H
+#define VALUE_H
 
 #include "common.h"
 
@@ -56,3 +57,5 @@ void write_value_array(value_array_t* array, value_t value);
 void free_value_array(value_array_t* array);
 void print_value(value_t value);
 bool values_equal(value_t a, value_t b);
+
+#endif

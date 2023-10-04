@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TOKEN_H
+#define TOKEN_H
 
 typedef enum {
     // Single character tokens.
@@ -57,3 +58,5 @@ typedef struct {
     int length;
     int line;
 } token_t;
+
+#endif

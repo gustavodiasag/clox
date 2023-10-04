@@ -1,4 +1,5 @@
-#pragma once
+#ifndef COMPILER_H
+#define COMPILER_H
 
 #include "back-end/object.h"
 #include "scanner.h"
@@ -93,3 +94,5 @@ static void and_(bool can_assign);
 static void or_(bool can_assign);
 static void call(bool can_assign);
 static void dot(bool can_assign);
+
+#endif
