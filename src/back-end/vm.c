@@ -573,7 +573,6 @@ void init_vm()
     define_native("clock", clock_native);
 }
 
-/// @brief Frees all objects once the program is done executing.
 void free_vm()
 {
     free_table(&vm.globals);

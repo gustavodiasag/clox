@@ -35,10 +35,6 @@ static obj_t* allocate_obj(size_t size, obj_type_t type)
     return obj;
 }
 
-/// @brief Creates a new bounded method object.
-/// @param receiver variable receiving the method
-/// @param method method clojure
-/// @return pointer to the object created
 obj_bound_method_t* new_bound_method(value_t receiver, obj_closure_t* method)
 {
     obj_bound_method_t* bound = ALLOCATE_OBJ(obj_bound_method_t, OBJ_BOUND_METHOD);
@@ -48,9 +44,6 @@ obj_bound_method_t* new_bound_method(value_t receiver, obj_closure_t* method)
     return bound;
 }
 
-/// @brief Creates a new class object
-/// @param name class' name
-/// @return pointer to the object created
 obj_class_t* new_class(obj_str_t* name)
 {
     obj_class_t* class = ALLOCATE_OBJ(obj_class_t, OBJ_CLASS);
@@ -60,9 +53,6 @@ obj_class_t* new_class(obj_str_t* name)
     return class;
 }
 
-/// @brief Creates a new upvalue object
-/// @param slot stack position of the captured variable
-/// @return pointer to the object created
 obj_upvalue_t* new_upvalue(value_t* slot)
 {
     obj_upvalue_t* upvalue = ALLOCATE_OBJ(obj_upvalue_t, OBJ_UPVALUE);
@@ -73,9 +63,6 @@ obj_upvalue_t* new_upvalue(value_t* slot)
     return upvalue;
 }
 
-/// @brief Creates a new closure object.
-/// @param function
-/// @return pointer to the object created
 obj_closure_t* new_closure(obj_func_t* function)
 {
     obj_upvalue_t** upvalues = ALLOCATE(obj_upvalue_t*, function->upvalue_count);
@@ -91,8 +78,6 @@ obj_closure_t* new_closure(obj_func_t* function)
     return closure;
 }
 
-/// @brief Creates a new Lox function.
-/// @return pointer to the object created
 obj_func_t* new_func()
 {
     obj_func_t* func = ALLOCATE_OBJ(obj_func_t, OBJ_FUNC);
@@ -105,9 +90,6 @@ obj_func_t* new_func()
     return func;
 }
 
-/// @brief Creates an object representing a new instance
-/// @param class instance's class
-/// @return pointer to the object created
 obj_instance_t* new_instance(obj_class_t* class)
 {
     obj_instance_t* instance = ALLOCATE_OBJ(obj_instance_t, OBJ_INSTANCE);
@@ -118,9 +100,6 @@ obj_instance_t* new_instance(obj_class_t* class)
     return instance;
 }
 
-/// @brief Creates an object representing a native function.
-/// @param function given native
-/// @return pointer to the object created
 obj_native_t* new_native(native_fn_t function)
 {
     obj_native_t* native = ALLOCATE_OBJ(obj_native_t, OBJ_NATIVE);
@@ -167,10 +146,6 @@ static uint32_t hash_str(const char* key, int len)
     return hash;
 }
 
-/// @brief Takes ownership of the specified string.
-/// @param chars string content
-/// @param len string length
-/// @return pointer to the new objcet containing the string
 obj_str_t* take_str(char* chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
@@ -186,10 +161,6 @@ obj_str_t* take_str(char* chars, int len)
     return allocate_str(chars, len, hash);
 }
 
-/// @brief Consumes the string literal, properly allocating it on the heap.
-/// @param chars string literal
-/// @param len string length
-/// @return pointer to the object generated from that string
 obj_str_t* copy_str(const char* chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
@@ -218,8 +189,6 @@ static void print_func(obj_func_t* func)
     printf(" <fn %s>", func->name->chars);
 }
 
-/// @brief Prints a value representing an object.
-/// @param value contains the object type
 void print_obj(value_t value)
 {
     switch (OBJ_TYPE(value)) {

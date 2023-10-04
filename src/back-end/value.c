@@ -48,10 +48,6 @@ void print_value(value_t value)
     }
 }
 
-/// @brief Compares the equality between two values, allowing multiple types.
-/// @param a first value
-/// @param b second value
-/// @return whether the values are different or not
 bool values_equal(value_t a, value_t b)
 {
     if (a.type != b.type)

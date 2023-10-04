@@ -136,15 +136,55 @@ typedef struct {
     obj_closure_t* method;
 } obj_bound_method_t;
 
+/// @brief Creates a new bounded method object.
+/// @param receiver variable receiving the method
+/// @param method method clojure
+/// @return pointer to the object created
 obj_bound_method_t* new_bound_method(value_t receiver, obj_closure_t* method);
+
+/// @brief Creates a new class object
+/// @param name class' name
+/// @return pointer to the object created
 obj_class_t* new_class(obj_str_t* name);
+
+/// @brief Creates a new upvalue object
+/// @param slot stack position of the captured variable
+/// @return pointer to the object created
 obj_upvalue_t* new_upvalue(value_t* slot);
+
+/// @brief Creates a new closure object.
+/// @param function
+/// @return pointer to the object created
 obj_closure_t* new_closure(obj_func_t* function);
+
+/// @brief Creates a new Lox function.
+/// @return pointer to the object created
 obj_func_t* new_func();
+
+/// @brief Creates an object representing a new instance
+/// @param class instance's class
+/// @return pointer to the object created
 obj_instance_t* new_instance(obj_class_t* class);
+
+/// @brief Creates an object representing a native function.
+/// @param function given native
+/// @return pointer to the object created
 obj_native_t* new_native(native_fn_t function);
+
+/// @brief Takes ownership of the specified string.
+/// @param chars string content
+/// @param len string length
+/// @return pointer to the new objcet containing the string
 obj_str_t* take_str(char* chars, int len);
+
+/// @brief Consumes the string literal, properly allocating it on the heap.
+/// @param chars string literal
+/// @param len string length
+/// @return pointer to the object generated from that string
 obj_str_t* copy_str(const char* chars, int len);
+
+/// @brief Prints a value representing an object.
+/// @param value contains the object type
 void print_obj(value_t value);
 
 /// @brief Tells when is safe to cast a value to a specific object type.

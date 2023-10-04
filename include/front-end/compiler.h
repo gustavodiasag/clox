@@ -78,8 +78,13 @@ typedef struct {
     precedence_t precedence;
 } parse_rule_t;
 
+// TODO: Description.
 obj_func_t* compile(const char* source);
+
+/// @brief Marks objects allocated on the heap by the compiler.
 void mark_compiler_roots();
+
+// TODO: Refactor.
 static void expression();
 static void statement();
 static void declaration();

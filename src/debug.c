@@ -57,9 +57,6 @@ static int jump_instruction(const char* name, int sign, chunk_t* chunk, int offs
     return offset + 3;
 }
 
-/// @brief Prints all the instructions in a chunk.
-/// @param chunk stores the bytecode to be analysed
-/// @param name function's name
 void disassemble_chunk(chunk_t* chunk, const char* name)
 {
     printf("== %s ==\n", name);
@@ -69,10 +66,6 @@ void disassemble_chunk(chunk_t* chunk, const char* name)
     }
 }
 
-/// @brief Disassembles the instruction at the given offset.
-/// @param chunk contains the instruction to be checked
-/// @param offset used to access a specific instruction
-/// @return the offset of the next instruction
 int disassemble_instruction(chunk_t* chunk, int offset)
 {
     printf("%04d ", offset);

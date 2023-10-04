@@ -322,7 +322,6 @@ obj_func_t* compile(const char* source)
     return (parser.had_error) ? NULL : func;
 }
 
-/// @brief Marks memory allocated on the heap by the compiler.
 void mark_compiler_roots()
 {
     // A compiler itself periodically gets memory from the heap for literals

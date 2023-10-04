@@ -52,10 +52,22 @@ typedef struct {
     value_t* values;
 } value_array_t;
 
+// TODO: Description.
 void init_value_array(value_array_t* array);
+
+// TODO: Description.
 void write_value_array(value_array_t* array, value_t value);
+
+// TODO: Description.
 void free_value_array(value_array_t* array);
+
+// TODO: Description.
 void print_value(value_t value);
+
+/// @brief Compares the equality between two values, allowing multiple types.
+/// @param a first value
+/// @param b second value
+/// @return whether the values are different or not
 bool values_equal(value_t a, value_t b);
 
 #endif

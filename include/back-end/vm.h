@@ -61,10 +61,19 @@ typedef enum {
 // on other modules.
 extern vm_t vm;
 
+// TODO: Description.
 void init_vm();
+
+/// @brief Frees all objects once the program is done executing.
 void free_vm();
+
+// TODO: Description.
 interpret_result_t interpret(const char* source);
+
+// TODO: Description.
 void push(value_t value);
+
+// TODO: Description.
 value_t pop();
 
 #endif

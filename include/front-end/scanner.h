@@ -12,7 +12,10 @@ typedef struct {
     int line;
 } scanner_t;
 
+// TODO: Description.
 void init_scanner(const char* source);
+
+// TODO: Description.
 token_t scan_token();
 
 #endif

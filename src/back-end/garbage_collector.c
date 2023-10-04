@@ -13,8 +13,6 @@
 
 #define GC_HEAP_GROW_FACTOR 2
 
-/// @brief Marks a heap-stored value from the language
-/// @param obj object referenced by the value
 void mark_object(obj_t* obj)
 {
     if (!obj)
@@ -42,8 +40,6 @@ void mark_object(obj_t* obj)
     vm.gray_stack[vm.gray_count++] = obj;
 }
 
-/// @brief Marks stack-stored values for garbage collection.
-/// @param value content stored in a certain stack slot
 void mark_value(value_t value)
 {
     // Some values are stored directly inline in `value_t` and require
@@ -125,8 +121,6 @@ static void blacken_object(obj_t* obj)
     }
 }
 
-/// @brief Frees the table's keys not marked for reachability.
-/// @param table
 void table_remove_white(table_t* table)
 {
     for (int i = 0; i < table->size; i++) {
@@ -137,8 +131,6 @@ void table_remove_white(table_t* table)
     }
 }
 
-/// @brief Marks all the positions from the given table.
-/// @param table hash table
 void mark_table(table_t* table)
 {
     for (int i = 0; i < table->size; i++) {

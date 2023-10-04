@@ -11,11 +11,6 @@
 
 #endif
 
-/// @brief Allocates, frees, shrinks and expands the size of a dynamic allocation.
-/// @param ptr pointer to the block of memory allocated
-/// @param old_size previous size of allocation
-/// @param new_size size to be allocated
-/// @return pointer to the newly allocated memory
 void* reallocate(void* ptr, size_t old_size, size_t new_size)
 {
     vm.bytes_allocated += (new_size - old_size);
@@ -41,8 +36,6 @@ void* reallocate(void* ptr, size_t old_size, size_t new_size)
     return result;
 }
 
-/// @brief Deallocates the specified object considering its type.
-/// @param obj object to be freed from memory
 void free_obj(obj_t* obj)
 {
 #ifdef DEBUG_LOG_GC
@@ -104,7 +97,6 @@ void free_obj(obj_t* obj)
     }
 }
 
-/// @brief Frees the whole linked list of objects from the virtual machine.
 void free_objs()
 {
     obj_t* obj = vm.objects;
