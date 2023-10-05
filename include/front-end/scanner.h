@@ -10,12 +10,12 @@ typedef struct {
     const char* current;
     // Used for error reporting.
     int line;
-} scanner_t;
+} Scanner;
 
 // TODO: Description.
 void init_scanner(const char* source);
 
 // TODO: Description.
-token_t scan_token();
+Token scan_token();
 
 #endif

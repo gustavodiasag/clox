@@ -40,7 +40,7 @@ typedef enum {
     OP_CLASS,
     OP_METHOD,
     OP_RETURN
-} op_code_t; // FIXME: Add support for `<=`, `!=` and `>=`.
+} OpCode; // FIXME: Add support for `<=`, `!=` and `>=`.
 
 // Represents a dynamic array of instructions. Provides dense storage,
 // constant-time indexed lookup and appending to the end of the array.
@@ -49,19 +49,19 @@ typedef struct {
     int capacity;
     uint8_t* code;
     int* lines;
-    value_array_t constants;
-} chunk_t;
+    ValueArray constants;
+} Chunk;
 
 // TODO: Description.
-void init_chunk(chunk_t* chunk);
+void init_chunk(Chunk* chunk);
 
 // TODO: Description.
-void free_chunk(chunk_t* chunk);
+void free_chunk(Chunk* chunk);
 
 // TODO: Description.
-void write_chunk(chunk_t* chunk, uint8_t byte, int line);
+void write_chunk(Chunk* chunk, uint8_t byte, int line);
 
 // TODO: Description.
-int add_constant(chunk_t* chunk, value_t value);
+int add_constant(Chunk* chunk, Value value);
 
 #endif

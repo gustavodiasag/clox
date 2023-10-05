@@ -16,14 +16,14 @@
 #define IS_NATIVE(val) is_obj_type(val, OBJ_NATIVE)
 #define IS_STR(val) is_obj_type(val, OBJ_STR)
 
-#define AS_BOUND_METHOD(val) ((obj_bound_method_t*)AS_OBJ(val))
-#define AS_CLASS(val) ((obj_class_t*)AS_OBJ(val))
-#define AS_CLOSURE(val) ((obj_closure_t*)AS_OBJ(val))
-#define AS_FUNC(val) ((obj_func_t*)AS_OBJ(val))
-#define AS_INSTANCE(val) ((obj_instance_t*)AS_OBJ(val))
-#define AS_NATIVE(val) (((obj_native_t*)AS_OBJ(val))->function)
-#define AS_STR(val) ((obj_str_t*)AS_OBJ(val))
-#define AS_CSTR(val) (((obj_str_t*)AS_OBJ(val))->chars)
+#define AS_BOUND_METHOD(val) ((ObjBoundMethod*)AS_OBJ(val))
+#define AS_CLASS(val) ((ObjClass*)AS_OBJ(val))
+#define AS_CLOSURE(val) ((ObjClosure*)AS_OBJ(val))
+#define AS_FUNC(val) ((ObjFun*)AS_OBJ(val))
+#define AS_INSTANCE(val) ((ObjInst*)AS_OBJ(val))
+#define AS_NATIVE(val) (((ObjNative*)AS_OBJ(val))->function)
+#define AS_STR(val) ((ObjStr*)AS_OBJ(val))
+#define AS_CSTR(val) (((ObjStr*)AS_OBJ(val))->chars)
 
 // All heap-allocated components supported in the language.
 typedef enum {
@@ -35,43 +35,43 @@ typedef enum {
     OBJ_NATIVE,
     OBJ_STR,
     OBJ_UPVALUE
-} obj_type_t;
+} ObjType;
 
-struct obj_t {
+struct Obj {
     // Identifies what kind of object it is.
-    obj_type_t type;
+    ObjType type;
     // Flag determining that the object is reachable in memory.
     bool is_marked;
-    struct obj_t* next;
+    struct Obj* next;
 };
 
 // Since functions are first class in Lox, they should be
 // represented as objects.
 typedef struct {
-    obj_t obj;
+    Obj obj;
     // Stores the number of parameters the function expects.
     int arity;
     // Number of upvalues accessed by the function.
     int upvalue_count;
     // Each function contains its own chunk of bytecode.
-    chunk_t chunk;
+    Chunk chunk;
     // Function name.
-    obj_str_t* name;
-} obj_func_t;
+    ObjStr* name;
+} ObjFun;
 
-typedef value_t (*native_fn_t)(int argc, value_t* argv);
+typedef Value (*NativeFun)(int argc, Value* argv);
 
 // Given that native functions behave in a different way when
 // compared to the language's functions, they are defined as
 // an entirely different object type.
 typedef struct {
-    obj_t obj;
+    Obj obj;
     // Pointer to the C function that implements the native behavior.
-    native_fn_t function;
-} obj_native_t;
+    NativeFun function;
+} ObjNative;
 
-struct obj_str_t {
-    obj_t obj;
+struct ObjStr {
+    Obj obj;
     // Used to avoid traversing the string.
     int length;
     // Each string object stores a hash code for its content.
@@ -82,116 +82,116 @@ struct obj_str_t {
 };
 
 // Runtime representation of upvalues.
-typedef struct obj_upvalue_t {
-    obj_t obj;
+typedef struct ObjUpvalue {
+    Obj obj;
     // Pointer to a closed-over variable.
-    value_t* location;
+    Value* location;
     // Because an object is already stored in the heap, when an
     // upvalue is closed, the variable representation becomes
     // part of the upvalue object.
-    value_t closed;
+    Value closed;
     // The linked-list semantic is used so that the virtual machine
     // is able to store its own list of upvalues that point to
     // variables still on the stack.
-    struct obj_upvalue_t* next;
-} obj_upvalue_t;
+    struct ObjUpvalue* next;
+} ObjUpvalue;
 
 // Wrapper around a function object that represents its declaration
 // at runtime. Functions can have references to variables declared
 // in their bodies and also capture outer-scoped variables, so
 // their behavior is similar to that of a closure.
 typedef struct {
-    obj_t obj;
-    obj_func_t* function;
+    Obj obj;
+    ObjFun* function;
     // Pointer to a dynamically allocated array of pointers to
     // upvalues.
-    obj_upvalue_t** upvalues;
+    ObjUpvalue** upvalues;
     // Number of elements in the upvalue array.
     int upvalue_count;
-} obj_closure_t;
+} ObjClosure;
 
 // Runtime representation of classes.
 typedef struct {
-    obj_t obj;
+    Obj obj;
     // Class' name.
-    obj_str_t* name;
+    ObjStr* name;
     // Each class stores a hash table of methods. Keys are
     // method names and each value is a closure object.
-    table_t methods;
-} obj_class_t;
+    Table methods;
+} ObjClass;
 
 // Represents an instance of some class.
 typedef struct {
-    obj_t obj;
+    Obj obj;
     // Pointer to the class that the instance represents.
-    obj_class_t* class;
+    ObjClass* class;
     // Instances' state storage.
-    table_t fields;
-} obj_instance_t;
+    Table fields;
+} ObjInst;
 
 // Wraps some receiver and the method closure together.
 typedef struct {
-    obj_t obj;
-    value_t receiver;
-    obj_closure_t* method;
-} obj_bound_method_t;
+    Obj obj;
+    Value receiver;
+    ObjClosure* method;
+} ObjBoundMethod;
 
 /// @brief Creates a new bounded method object.
 /// @param receiver variable receiving the method
 /// @param method method clojure
 /// @return pointer to the object created
-obj_bound_method_t* new_bound_method(value_t receiver, obj_closure_t* method);
+ObjBoundMethod* new_bound_method(Value receiver, ObjClosure* method);
 
 /// @brief Creates a new class object
 /// @param name class' name
 /// @return pointer to the object created
-obj_class_t* new_class(obj_str_t* name);
+ObjClass* new_class(ObjStr* name);
 
 /// @brief Creates a new upvalue object
 /// @param slot stack position of the captured variable
 /// @return pointer to the object created
-obj_upvalue_t* new_upvalue(value_t* slot);
+ObjUpvalue* new_upvalue(Value* slot);
 
 /// @brief Creates a new closure object.
 /// @param function
 /// @return pointer to the object created
-obj_closure_t* new_closure(obj_func_t* function);
+ObjClosure* new_closure(ObjFun* function);
 
 /// @brief Creates a new Lox function.
 /// @return pointer to the object created
-obj_func_t* new_func();
+ObjFun* new_func();
 
 /// @brief Creates an object representing a new instance
 /// @param class instance's class
 /// @return pointer to the object created
-obj_instance_t* new_instance(obj_class_t* class);
+ObjInst* new_instance(ObjClass* class);
 
 /// @brief Creates an object representing a native function.
 /// @param function given native
 /// @return pointer to the object created
-obj_native_t* new_native(native_fn_t function);
+ObjNative* new_native(NativeFun function);
 
 /// @brief Takes ownership of the specified string.
 /// @param chars string content
 /// @param len string length
 /// @return pointer to the new objcet containing the string
-obj_str_t* take_str(char* chars, int len);
+ObjStr* take_str(char* chars, int len);
 
 /// @brief Consumes the string literal, properly allocating it on the heap.
 /// @param chars string literal
 /// @param len string length
 /// @return pointer to the object generated from that string
-obj_str_t* copy_str(const char* chars, int len);
+ObjStr* copy_str(const char* chars, int len);
 
 /// @brief Prints a value representing an object.
 /// @param value contains the object type
-void print_obj(value_t value);
+void print_obj(Value value);
 
 /// @brief Tells when is safe to cast a value to a specific object type.
 /// @param value
 /// @param type object expected
 /// @return whether the value is an object of the specified type
-static inline bool is_obj_type(value_t value, obj_type_t type)
+static inline bool is_obj_type(Value value, ObjType type)
 {
     // An inline function is used instead of a macro because the value gets
     // accessed twice. If that expression has side effects, once the macro

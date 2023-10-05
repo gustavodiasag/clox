@@ -3,10 +3,10 @@
 
 #include "common.h"
 
-#define BOOL_VAL(val) ((value_t){VAL_BOOL, {.boolean = val}})
-#define NIL_VAL ((value_t){VAL_NIL, {.number = 0}})
-#define NUM_VAL(val) ((value_t){VAL_NUM, {.number = val}})
-#define OBJ_VAL(object) ((value_t){VAL_OBJ, {.obj = (obj_t*)object}})
+#define BOOL_VAL(val) ((Value){VAL_BOOL, {.boolean = val}})
+#define NIL_VAL ((Value){VAL_NIL, {.number = 0}})
+#define NUM_VAL(val) ((Value){VAL_NUM, {.number = val}})
+#define OBJ_VAL(object) ((Value){VAL_OBJ, {.obj = (Obj*)object}})
 
 #define IS_BOOL(val) ((val).type == VAL_BOOL)
 #define IS_NIL(val) ((val).type == VAL_NIL)
@@ -23,51 +23,51 @@ typedef enum {
     VAL_NIL,
     VAL_NUM,
     VAL_OBJ
-} value_type_t;
+} ValueType;
 
 // Contains the state shared across all object types.
-typedef struct obj_t obj_t;
+typedef struct Obj Obj;
 
 // Each object type will have an `obj_t` as its first field. This is useful
 // considering struct pointers can be converted to point to its first field,
 // so any piece of code that intends to manipulate all objects can treat
 // them as `obj_t *` and ignore other following fields.
-typedef struct obj_str_t obj_str_t;
+typedef struct ObjStr ObjStr;
 
 // Tagged union representing a type and its correspondent value.
 typedef struct {
-    value_type_t type;
+    ValueType type;
     union {
         bool boolean;
         double number;
         // A value whose state lives on the heap memory.
-        obj_t* obj;
+        Obj* obj;
     } as;
-} value_t;
+} Value;
 
 //  List of values that appear as literals in the program.
 typedef struct {
     int capacity;
     int count;
-    value_t* values;
-} value_array_t;
+    Value* values;
+} ValueArray;
 
 // TODO: Description.
-void init_value_array(value_array_t* array);
+void init_value_array(ValueArray* array);
 
 // TODO: Description.
-void write_value_array(value_array_t* array, value_t value);
+void write_value_array(ValueArray* array, Value value);
 
 // TODO: Description.
-void free_value_array(value_array_t* array);
+void free_value_array(ValueArray* array);
 
 // TODO: Description.
-void print_value(value_t value);
+void print_value(Value value);
 
 /// @brief Compares the equality between two values, allowing multiple types.
 /// @param a first value
 /// @param b second value
 /// @return whether the values are different or not
-bool values_equal(value_t a, value_t b);
+bool values_equal(Value a, Value b);
 
 #endif

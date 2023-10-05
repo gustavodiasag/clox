@@ -33,7 +33,7 @@ void* reallocate(void* pointer, size_t old_size, size_t new_size);
 
 /// @brief Deallocates the specified object considering its type.
 /// @param obj object to be freed from memory
-void free_obj(obj_t* obj);
+void free_obj(Obj* obj);
 
 /// @brief Frees the object linked list from the virtual machine.
 void free_objs();

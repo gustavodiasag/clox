@@ -13,53 +13,53 @@
 // Represents a single ongoing function call.
 typedef struct {
     // Function being called.
-    obj_closure_t* closure;
+    ObjClosure* closure;
     // Instead of storing the return address in the callee's
     // frame, the caller stores its own instruction pointer.
     uint8_t* ip;
     // Points into the virtual machine's value stack
     // at the first slot that the function can use.
-    value_t* slots;
-} call_frame_t;
+    Value* slots;
+} CallFrame;
 
 typedef struct {
     // Dealing with function calls with stack semantics helps
     // optimizing memory usage by avoiding heap allocations.
-    call_frame_t frames[FRAMES_MAX];
+    CallFrame frames[FRAMES_MAX];
     // Stores the current height of the call frame stack.
     int frame_count;
     // Runtime stack of values.
-    value_t stack[STACK_MAX];
+    Value stack[STACK_MAX];
     // Pointer to the top of the stack.
-    value_t* stack_top;
+    Value* stack_top;
     // Stores all strings created in the program.
-    table_t strings;
+    Table strings;
     // Stores all global variables created in the program.
-    table_t globals;
+    Table globals;
     // List of open upvalues that point to variables on the stack.
-    obj_upvalue_t* open_upvalues;
+    ObjUpvalue* open_upvalues;
     // Total number of bytes the vm has allocated.
     size_t bytes_allocated;
     // Threshold that triggers the next collection.
     size_t next_gc;
     // Linked list keeping track of every heap-allocated object.
-    obj_t* objects;
+    Obj* objects;
     // Stores all the grey objects marked by the gc.
-    obj_t** gray_stack;
+    Obj** gray_stack;
     int gray_capacity;
     // Number of grey objects in total.
     int gray_count;
-} vm_t;
+} Vm;
 
 typedef enum {
     INTERPRET_OK,
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR
-} interpret_result_t;
+} InterpretResult;
 
 // Exposes the global variable so that it can be used
 // on other modules.
-extern vm_t vm;
+extern Vm vm;
 
 // TODO: Description.
 void init_vm();
@@ -68,12 +68,12 @@ void init_vm();
 void free_vm();
 
 // TODO: Description.
-interpret_result_t interpret(const char* source);
+InterpretResult interpret(const char* source);
 
 // TODO: Description.
-void push(value_t value);
+void push(Value value);
 
 // TODO: Description.
-value_t pop();
+Value pop();
 
 #endif

@@ -4,7 +4,7 @@
 #include "back-end/object.h"
 #include "scanner.h"
 
-typedef void (*parse_fn_t)(bool can_assign);
+typedef void (*ParseFun)(bool can_assign);
 
 typedef enum {
     PREC_NONE,
@@ -18,24 +18,24 @@ typedef enum {
     PREC_UNARY,
     PREC_CALL,
     PREC_PRIMARY
-} precedence_t;
+} Precedence;
 
 typedef struct {
     // Variable name.
-    token_t name;
+    Token name;
     // Records the scope depth of the block where
     // the local variable was declared.
     int depth;
     // Tells if the local is captured by a closure.
     bool is_captured;
-} local_t;
+} Local;
 
 typedef struct {
     // Stores which local slot the upvalue is capturing.
     uint8_t index;
     // TODO: description.
     bool is_local;
-} upvalue_t;
+} UpValue;
 
 // Used by the compiler to detect whether the code being
 // processed corresponds to the top-level program or the
@@ -43,43 +43,43 @@ typedef struct {
 typedef enum {
     TYPE_FUNC,
     TYPE_SCRIPT
-} func_type_t;
+} FunType;
 
-typedef struct compiler_t {
+typedef struct Compiler {
     // Linked-list used to provide access to the surrounding
     // compiler and its bytecode chunk.
-    struct compiler_t* enclosing;
-    obj_func_t* func;
-    func_type_t type;
+    struct Compiler* enclosing;
+    ObjFun* func;
+    FunType type;
     // Locals that are in scope at each point in the
     // compilation process.
-    local_t locals[UINT8_COUNT];
+    Local locals[UINT8_COUNT];
     // Tracks how many locals are in scope.
     int local_count;
     // Upvalues looked-up by the function being parsed.
-    upvalue_t upvalues[UINT8_COUNT];
+    UpValue upvalues[UINT8_COUNT];
     // Number of blocks surrounding the code being compiled.
     int scope_depth;
-} compiler_t;
+} Compiler;
 
 typedef struct {
-    token_t current;
-    token_t previous;
+    Token current;
+    Token previous;
     // Records whether any errors ocurred during compilation.
     bool had_error;
     // Used to enter panic mode, responsible for suppressing
     // cascated compile-time error reporting.
     bool panic;
-} parser_t;
+} Parser;
 
 typedef struct {
-    parse_fn_t prefix;
-    parse_fn_t infix;
-    precedence_t precedence;
-} parse_rule_t;
+    ParseFun prefix;
+    ParseFun infix;
+    Precedence precedence;
+} ParseRule;
 
 // TODO: Description.
-obj_func_t* compile(const char* source);
+ObjFun* compile(const char* source);
 
 /// @brief Marks objects allocated on the heap by the compiler.
 void mark_compiler_roots();

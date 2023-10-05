@@ -48,15 +48,15 @@ typedef enum {
     TOKEN_ERROR,
     // End-of-file flag.
     TOKEN_EOF
-} token_type_t;
+} TokenType;
 
 // A lexeme is represented by a pointer to its first character in
 // the source string and the number of characters it contains.
 typedef struct {
-    token_type_t type;
+    TokenType type;
     const char* start;
     int length;
     int line;
-} token_t;
+} Token;
 
 #endif
