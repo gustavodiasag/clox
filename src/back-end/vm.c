@@ -10,13 +10,13 @@
 #include "front-end/compiler.h"
 #include "memory.h"
 
-vm_t vm; // FIXME: Should be manipulated through pointers.
+Vm vm; // FIXME: Should be manipulated through pointers.
 
 /// @brief Defines one of the native functions supported by the language.
 /// @param argc number of arguments
 /// @param argv pointer to the first argument
 /// @return elapsed time since the program started running.
-static value_t clock_native(int argc, value_t* argv)
+static Value clock_native(int argc, Value* argv)
 {
     return NUM_VAL((double)clock() / CLOCKS_PER_SEC);
 }
@@ -42,8 +42,8 @@ static void runtime_err(const char* format, ...)
     fputs("\n", stderr);
     // Stack trace of each function executing when the error occurred.
     for (int i = vm.frame_count - 1; i >= 0; i--) {
-        call_frame_t* frame = &vm.frames[i];
-        obj_func_t* func = frame->closure->function;
+        CallFrame* frame = &vm.frames[i];
+        ObjFun* func = frame->closure->function;
         size_t instruction = frame->ip - func->chunk.code - 1;
 
         fprintf(stderr, "[line %d] in ", func->chunk.lines[instruction]);
@@ -61,7 +61,7 @@ static void runtime_err(const char* format, ...)
 /// @brief Defines a new native function exposed to the language.
 /// @param name function name
 /// @param function native function
-static void define_native(const char* name, native_fn_t function)
+static void define_native(const char* name, NativeFun function)
 {
     push(OBJ_VAL(copy_str(name, (int)strlen(name))));
     push(OBJ_VAL(new_native(function)));
@@ -72,7 +72,7 @@ static void define_native(const char* name, native_fn_t function)
 /// @brief Looks at the stack without popping any value stored.
 /// @param offset how far from the top of the stack to look
 /// @return the value at the position specified
-static value_t peek(int offset)
+static Value peek(int offset)
 {
     return vm.stack_top[-1 - offset];
 }
@@ -81,7 +81,7 @@ static value_t peek(int offset)
 /// @param func closure being called (all functions are closures)
 /// @param args amount of arguments supported
 /// @return status of successfully initialized frame
-static bool init_frame(obj_closure_t* closure, int args)
+static bool init_frame(ObjClosure* closure, int args)
 {
     // The overlapping stack windows work based on the assumption
     // that a call passes exactly one argument for each of the
@@ -98,7 +98,7 @@ static bool init_frame(obj_closure_t* closure, int args)
         return false;
     }
 
-    call_frame_t* frame = &vm.frames[vm.frame_count++];
+    CallFrame* frame = &vm.frames[vm.frame_count++];
 
     frame->closure = closure;
     frame->ip = closure->function->chunk.code;
@@ -114,19 +114,19 @@ static bool init_frame(obj_closure_t* closure, int args)
 /// @param callee value containing the function object
 /// @param args amount of arguments supported
 /// @return whether the call was successfully executed or not
-static bool call_value(value_t callee, int args)
+static bool call_value(Value callee, int args)
 {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
         case OBJ_BOUND_METHOD: {
-            obj_bound_method_t* bound = AS_BOUND_METHOD(callee);
+            ObjBoundMethod* bound = AS_BOUND_METHOD(callee);
             
             return init_frame(bound->method, args);
         }
         // If the value being called is a class, then it
         // is treated as a constructor call.
         case OBJ_CLASS: {
-            obj_class_t* class = AS_CLASS(callee);
+            ObjClass* class = AS_CLASS(callee);
             vm.stack_top[-args - 1] = OBJ_VAL(new_instance(class));
 
             return true;
@@ -134,8 +134,8 @@ static bool call_value(value_t callee, int args)
         case OBJ_CLOSURE:
             return init_frame(AS_CLOSURE(callee), args);
         case OBJ_NATIVE: {
-            native_fn_t native = AS_NATIVE(callee);
-            value_t result = native(args, vm.stack_top - args);
+            NativeFun native = AS_NATIVE(callee);
+            Value result = native(args, vm.stack_top - args);
 
             vm.stack_top -= args + 1;
             push(result);
@@ -155,16 +155,16 @@ static bool call_value(value_t callee, int args)
 /// @param class contains the method table
 /// @param name method name
 /// @return whether the method was found in the table
-static bool bind_method(obj_class_t* class, obj_str_t* name)
+static bool bind_method(ObjClass* class, ObjStr* name)
 {
-    value_t method;
+    Value method;
 
     if (!table_get(&class->methods, name, &method)) {
         runtime_err("Undefined property '%s'.", name->chars);
         return false;
     }
 
-    obj_bound_method_t* bound = new_bound_method(peek(0), AS_CLOSURE(method));
+    ObjBoundMethod* bound = new_bound_method(peek(0), AS_CLOSURE(method));
     pop();
     push(OBJ_VAL(bound));
 
@@ -174,10 +174,10 @@ static bool bind_method(obj_class_t* class, obj_str_t* name)
 /// @brief Closes over a local variable from the surrounding function.
 /// @param local pointer to the captured local's slot
 /// @return pointer to the upvalue object created
-static obj_upvalue_t* capture_upvalue(value_t* local)
+static ObjUpvalue* capture_upvalue(Value* local)
 {
-    obj_upvalue_t* prev_upvalue = NULL;
-    obj_upvalue_t* curr_upvalue = vm.open_upvalues;
+    ObjUpvalue* prev_upvalue = NULL;
+    ObjUpvalue* curr_upvalue = vm.open_upvalues;
 
     while (curr_upvalue && curr_upvalue->location > local) {
         prev_upvalue = curr_upvalue;
@@ -187,7 +187,7 @@ static obj_upvalue_t* capture_upvalue(value_t* local)
     if (curr_upvalue && curr_upvalue->location == local)
         return curr_upvalue;
 
-    obj_upvalue_t* upvalue = new_upvalue(local);
+    ObjUpvalue* upvalue = new_upvalue(local);
     upvalue->next = curr_upvalue;
 
     if (!prev_upvalue) {
@@ -201,10 +201,10 @@ static obj_upvalue_t* capture_upvalue(value_t* local)
 
 /// @brief Closes every open upvalue pointing to the given slot.
 /// @param last pointer to a stack slot
-static void close_upvalues(value_t* last)
+static void close_upvalues(Value* last)
 {
     while (vm.open_upvalues && vm.open_upvalues->location >= last) {
-        obj_upvalue_t* upvalue = vm.open_upvalues;
+        ObjUpvalue* upvalue = vm.open_upvalues;
         upvalue->closed = *upvalue->location;
         upvalue->location = &upvalue->closed;
 
@@ -214,10 +214,10 @@ static void close_upvalues(value_t* last)
 
 /// @brief Stores the closure for a method in the class's method table
 /// @param name method
-static void define_method(obj_str_t* name)
+static void define_method(ObjStr* name)
 {
-    value_t method = peek(0);
-    obj_class_t* class = AS_CLASS(peek(1));
+    Value method = peek(0);
+    ObjClass* class = AS_CLASS(peek(1));
 
     table_set(&class->methods, name, method);
     pop();
@@ -226,7 +226,7 @@ static void define_method(obj_str_t* name)
 /// @brief Checks if the specified value has a false behaviour.
 /// @param value
 /// @return whether the value is true or not
-static bool is_falsey(value_t value)
+static bool is_falsey(Value value)
 {
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
@@ -239,8 +239,8 @@ static void concat()
     // maintain a reference to those objects so they can be reached
     // in the marking process, they are peeked instead of popped
     // from the stack.
-    obj_str_t* b = AS_STR(peek(0));
-    obj_str_t* a = AS_STR(peek(1));
+    ObjStr* b = AS_STR(peek(0));
+    ObjStr* a = AS_STR(peek(1));
 
     int len = a->length + b->length;
     char* chars = ALLOCATE(char, len + 1);
@@ -249,16 +249,16 @@ static void concat()
     memcpy(chars + a->length, b->chars, b->length);
     chars[len] = '\0';
 
-    obj_str_t* result = take_str(chars, len);
+    ObjStr* result = take_str(chars, len);
 
     pop();
     pop();
     push(OBJ_VAL(result));
 }
 
-static interpret_result_t run()
+static InterpretResult run()
 {
-    call_frame_t* frame = &vm.frames[vm.frame_count - 1];
+    CallFrame* frame = &vm.frames[vm.frame_count - 1];
 // Reads the byte currently pointed at and advances the frame's ip.
 #define READ_BYTE() (*frame->ip++)
 // Reads the next two bytes from the chunk, building a 16-bit unsigned integer.
@@ -286,7 +286,7 @@ static interpret_result_t run()
 #ifdef DEBUG_TRACE_EXECUTION
         printf("          ");
 
-        for (value_t* v = vm.stack; v < vm.stack_top; v++) {
+        for (Value* v = vm.stack; v < vm.stack_top; v++) {
             printf("[ ");
             print_value(*v);
             printf(" ]");
@@ -325,14 +325,14 @@ static interpret_result_t run()
             break;
         }
         case OP_GLOBAL: {
-            obj_str_t* name = READ_STR();
+            ObjStr* name = READ_STR();
 
             table_set(&vm.globals, name, peek(0));
             pop();
             break;
         }
         case OP_SET_GLOBAL: {
-            obj_str_t* name = READ_STR();
+            ObjStr* name = READ_STR();
 
             if (table_set(&vm.globals, name, peek(0))) {
                 table_delete(&vm.globals, name);
@@ -343,8 +343,8 @@ static interpret_result_t run()
             break;
         }
         case OP_GET_GLOBAL: {
-            obj_str_t* name = READ_STR();
-            value_t value;
+            ObjStr* name = READ_STR();
+            Value value;
 
             if (!table_get(&vm.globals, name, &value)) {
                 runtime_err("Undefined variable '%s'.", name->chars);
@@ -378,10 +378,10 @@ static interpret_result_t run()
 
                 return INTERPRET_RUNTIME_ERROR;
             }
-            obj_instance_t* instance = AS_INSTANCE(peek(0));
-            obj_str_t* name = READ_STR();
+            ObjInst* instance = AS_INSTANCE(peek(0));
+            ObjStr* name = READ_STR();
 
-            value_t value;
+            Value value;
 
             if (table_get(&instance->fields, name, &value)) {
                 pop(); /* instance */
@@ -409,17 +409,17 @@ static interpret_result_t run()
             // to be stored. The operand is read and the field name
             // string is determined. With that, the value on top of
             // the stack is stored into the instance's field table.
-            obj_instance_t* instance = AS_INSTANCE(peek(1));
+            ObjInst* instance = AS_INSTANCE(peek(1));
             table_set(&instance->fields, READ_STR(), peek(0));
 
-            value_t value = pop();
+            Value value = pop();
             pop();
             push(value);
             break;
         }
         case OP_EQUAL: {
-            value_t b = pop();
-            value_t a = pop();
+            Value b = pop();
+            Value a = pop();
 
             push(BOOL_VAL(values_equal(a, b)));
             break;
@@ -492,8 +492,8 @@ static interpret_result_t run()
             break;
         }
         case OP_CLOSURE: {
-            obj_func_t* function = AS_FUNC(READ_CONSTANT());
-            obj_closure_t* closure = new_closure(function);
+            ObjFun* function = AS_FUNC(READ_CONSTANT());
+            ObjClosure* closure = new_closure(function);
 
             push(OBJ_VAL(closure));
             for (int i = 0; i < closure->upvalue_count; i++) {
@@ -527,7 +527,7 @@ static interpret_result_t run()
             break;
         }
         case OP_RETURN: {
-            value_t result = pop();
+            Value result = pop();
             // Closes variables defined in the context of the function's scope,
             // such as it's parameters or locals declared inside its body.
             close_upvalues(frame->slots);
@@ -580,29 +580,29 @@ void free_vm()
     free_objs();
 }
 
-void push(value_t value)
+void push(Value value)
 {
     *vm.stack_top = value;
     vm.stack_top++;
 }
 
-value_t pop()
+Value pop()
 {
     vm.stack_top--;
 
     return *vm.stack_top;
 }
 
-interpret_result_t interpret(const char* source)
+InterpretResult interpret(const char* source)
 {
-    obj_func_t* func = compile(source);
+    ObjFun* func = compile(source);
 
     if (!func)
         return INTERPRET_COMPILE_ERROR;
 
     push(OBJ_VAL(func));
 
-    obj_closure_t* closure = new_closure(func);
+    ObjClosure* closure = new_closure(func);
 
     pop();
     push(OBJ_VAL(closure));

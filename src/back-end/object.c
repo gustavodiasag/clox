@@ -11,15 +11,15 @@
     (type*)allocate_obj(sizeof(type), obj_type)
 
 #define ALLOCATE_STR(len) \
-    (obj_str_t*)allocate_obj(sizeof(obj_str_t) + sizeof(char[len]), OBJ_STR)
+    (ObjStr*)allocate_obj(sizeof(ObjStr) + sizeof(char[len]), OBJ_STR)
 
 /// @brief Allocates an object of a given size on the heap.
 /// @param size specified number of bytes for varying extra fields
 /// @param type type of the object being allocated
 /// @return pointer to the object created
-static obj_t* allocate_obj(size_t size, obj_type_t type)
+static Obj* allocate_obj(size_t size, ObjType type)
 {
-    obj_t* obj = (obj_t*)reallocate(NULL, 0, size);
+    Obj* obj = (Obj*)reallocate(NULL, 0, size);
     obj->type = type;
     // Every new object begins unmarked because it hasn't been
     // determined if it is reachable or not.
@@ -35,27 +35,27 @@ static obj_t* allocate_obj(size_t size, obj_type_t type)
     return obj;
 }
 
-obj_bound_method_t* new_bound_method(value_t receiver, obj_closure_t* method)
+ObjBoundMethod* new_bound_method(Value receiver, ObjClosure* method)
 {
-    obj_bound_method_t* bound = ALLOCATE_OBJ(obj_bound_method_t, OBJ_BOUND_METHOD);
+    ObjBoundMethod* bound = ALLOCATE_OBJ(ObjBoundMethod, OBJ_BOUND_METHOD);
     bound->receiver = receiver;
     bound->method = method;
 
     return bound;
 }
 
-obj_class_t* new_class(obj_str_t* name)
+ObjClass* new_class(ObjStr* name)
 {
-    obj_class_t* class = ALLOCATE_OBJ(obj_class_t, OBJ_CLASS);
+    ObjClass* class = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
     class->name = name;
     init_table(&class->methods);
 
     return class;
 }
 
-obj_upvalue_t* new_upvalue(value_t* slot)
+ObjUpvalue* new_upvalue(Value* slot)
 {
-    obj_upvalue_t* upvalue = ALLOCATE_OBJ(obj_upvalue_t, OBJ_UPVALUE);
+    ObjUpvalue* upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
     upvalue->closed = NIL_VAL;
     upvalue->location = slot;
     upvalue->next = NULL;
@@ -63,14 +63,14 @@ obj_upvalue_t* new_upvalue(value_t* slot)
     return upvalue;
 }
 
-obj_closure_t* new_closure(obj_func_t* function)
+ObjClosure* new_closure(ObjFun* function)
 {
-    obj_upvalue_t** upvalues = ALLOCATE(obj_upvalue_t*, function->upvalue_count);
+    ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue*, function->upvalue_count);
 
     for (int i = 0; i < function->upvalue_count; i++)
         upvalues[i] = NULL;
 
-    obj_closure_t* closure = ALLOCATE_OBJ(obj_closure_t, OBJ_CLOSURE);
+    ObjClosure* closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
     closure->function = function;
     closure->upvalues = upvalues;
     closure->upvalue_count = function->upvalue_count;
@@ -78,9 +78,9 @@ obj_closure_t* new_closure(obj_func_t* function)
     return closure;
 }
 
-obj_func_t* new_func()
+ObjFun* new_func()
 {
-    obj_func_t* func = ALLOCATE_OBJ(obj_func_t, OBJ_FUNC);
+    ObjFun* func = ALLOCATE_OBJ(ObjFun, OBJ_FUNC);
     func->upvalue_count = 0;
     func->arity = 0;
     func->name = NULL;
@@ -90,9 +90,9 @@ obj_func_t* new_func()
     return func;
 }
 
-obj_instance_t* new_instance(obj_class_t* class)
+ObjInst* new_instance(ObjClass* class)
 {
-    obj_instance_t* instance = ALLOCATE_OBJ(obj_instance_t, OBJ_INSTANCE);
+    ObjInst* instance = ALLOCATE_OBJ(ObjInst, OBJ_INSTANCE);
     instance->class = class;
 
     init_table(&instance->fields);
@@ -100,9 +100,9 @@ obj_instance_t* new_instance(obj_class_t* class)
     return instance;
 }
 
-obj_native_t* new_native(native_fn_t function)
+ObjNative* new_native(NativeFun function)
 {
-    obj_native_t* native = ALLOCATE_OBJ(obj_native_t, OBJ_NATIVE);
+    ObjNative* native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
     native->function = function;
 
     return native;
@@ -113,9 +113,9 @@ obj_native_t* new_native(native_fn_t function)
 /// @param len string length
 /// @param hash string's hash code
 /// @return pointer to the object created
-static obj_str_t* allocate_str(char* chars, int len, uint32_t hash)
+static ObjStr* allocate_str(char* chars, int len, uint32_t hash)
 {
-    obj_str_t* str = ALLOCATE_STR(len);
+    ObjStr* str = ALLOCATE_STR(len);
     str->hash = hash;
     str->length = len;
     memcpy(str->chars, chars, len);
@@ -146,10 +146,10 @@ static uint32_t hash_str(const char* key, int len)
     return hash;
 }
 
-obj_str_t* take_str(char* chars, int len)
+ObjStr* take_str(char* chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
-    obj_str_t* interned = table_find(&vm.strings, chars, len, hash);
+    ObjStr* interned = table_find(&vm.strings, chars, len, hash);
 
     if (interned) {
         // Duplicate string is no longer needed.
@@ -161,11 +161,11 @@ obj_str_t* take_str(char* chars, int len)
     return allocate_str(chars, len, hash);
 }
 
-obj_str_t* copy_str(const char* chars, int len)
+ObjStr* copy_str(const char* chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
 
-    obj_str_t* interned = table_find(&vm.strings, chars, len, hash);
+    ObjStr* interned = table_find(&vm.strings, chars, len, hash);
 
     if (interned)
         return interned;
@@ -180,7 +180,7 @@ obj_str_t* copy_str(const char* chars, int len)
 
 /// @brief Prints the name of the given function object.
 /// @param func function object
-static void print_func(obj_func_t* func)
+static void print_func(ObjFun* func)
 {
     if (!func->name) {
         printf("<script>");
@@ -189,7 +189,7 @@ static void print_func(obj_func_t* func)
     printf(" <fn %s>", func->name->chars);
 }
 
-void print_obj(value_t value)
+void print_obj(Value value)
 {
     switch (OBJ_TYPE(value)) {
     case OBJ_BOUND_METHOD:

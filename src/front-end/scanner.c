@@ -5,7 +5,7 @@
 #include "front-end/scanner.h"
 #include "front-end/token.h"
 
-scanner_t scanner;
+Scanner scanner;
 
 void init_scanner(const char* source)
 {
@@ -62,9 +62,9 @@ static bool match(char c)
     return true;
 }
 
-static token_t make_token(token_type_t type)
+static Token make_token(TokenType type)
 {
-    token_t token;
+    Token token;
 
     token.type = type;
     token.start = scanner.start;
@@ -74,9 +74,9 @@ static token_t make_token(token_type_t type)
     return token;
 }
 
-static token_t error_token(const char* message)
+static Token error_token(const char* message)
 {
-    token_t token;
+    Token token;
 
     token.type = TOKEN_ERROR;
     // Points to the error message instead of the source code.
@@ -116,7 +116,7 @@ static void skip_whitespace()
     }
 }
 
-static token_type_t check_keyword(int start, int len, const char* rest, token_type_t type)
+static TokenType check_keyword(int start, int len, const char* rest, TokenType type)
 {
     if (scanner.current - scanner.start == start + len && memcmp(scanner.start + start, rest, len) == 0) {
         return type;
@@ -125,7 +125,7 @@ static token_type_t check_keyword(int start, int len, const char* rest, token_ty
     return TOKEN_IDENTIFIER;
 }
 
-static token_type_t identifier_type()
+static TokenType identifier_type()
 {
     switch (scanner.start[0]) {
     case 'a':
@@ -177,7 +177,7 @@ static token_type_t identifier_type()
     return TOKEN_IDENTIFIER;
 }
 
-static token_t identifier()
+static Token identifier()
 {
     while (is_alpha(peek()) || is_digit(peek()))
         advance();
@@ -185,7 +185,7 @@ static token_t identifier()
     return make_token(identifier_type());
 }
 
-static token_t number()
+static Token number()
 {
     while (is_digit(peek()))
         advance();
@@ -200,7 +200,7 @@ static token_t number()
     return make_token(TOKEN_NUMBER);
 }
 
-static token_t string()
+static Token string()
 {
     while (peek() != '"' && !is_at_end()) {
         if (peek() == '\n')
@@ -216,7 +216,7 @@ static token_t string()
     return make_token(TOKEN_STRING);
 }
 
-token_t scan_token()
+Token scan_token()
 {
     skip_whitespace();
 

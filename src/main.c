@@ -59,7 +59,7 @@ char* read_file(const char* path)
 void run_file(const char* path)
 {
     char* source = read_file(path);
-    interpret_result_t result = interpret(source);
+    InterpretResult result = interpret(source);
     free(source);
 
     // TODO: Handle errors using the GNU Library Reference Manual conventions.

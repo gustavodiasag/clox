@@ -13,7 +13,7 @@
 
 #define GC_HEAP_GROW_FACTOR 2
 
-void mark_object(obj_t* obj)
+void mark_object(Obj* obj)
 {
     if (!obj)
         return;
@@ -31,7 +31,7 @@ void mark_object(obj_t* obj)
 
     if (vm.gray_capacity < vm.gray_count + 1) {
         vm.gray_capacity = GROW_CAPACITY(vm.gray_capacity);
-        vm.gray_stack = (obj_t**)realloc(vm.gray_stack, sizeof(obj_t*) * vm.gray_capacity);
+        vm.gray_stack = (Obj**)realloc(vm.gray_stack, sizeof(Obj*) * vm.gray_capacity);
 
         if (!vm.gray_stack)
             exit(1);
@@ -40,7 +40,7 @@ void mark_object(obj_t* obj)
     vm.gray_stack[vm.gray_count++] = obj;
 }
 
-void mark_value(value_t value)
+void mark_value(Value value)
 {
     // Some values are stored directly inline in `value_t` and require
     // no heap allocation.
@@ -50,7 +50,7 @@ void mark_value(value_t value)
 
 /// @brief Marks all the values stored in an array.
 /// @param array value array
-static void mark_array(value_array_t* array)
+static void mark_array(ValueArray* array)
 {
     for (int i = 0; i < array->count; i++)
         mark_value(array->values[i]);
@@ -58,7 +58,7 @@ static void mark_array(value_array_t* array)
 
 /// @brief Marks all the given object's heap references.
 /// @param obj root object
-static void blacken_object(obj_t* obj)
+static void blacken_object(Obj* obj)
 {
 #ifdef DEBUG_LOG_GC
     printf("%p blacken ", (void*)obj);
@@ -70,32 +70,32 @@ static void blacken_object(obj_t* obj)
     // set and that is no longer in the gray stack.
     switch (obj->type) {
     case OBJ_BOUND_METHOD: {
-        obj_bound_method_t* bound = (obj_bound_method_t*) obj;
+        ObjBoundMethod* bound = (ObjBoundMethod*) obj;
         mark_value(bound->receiver);
         mark_object(bound->method);
         break;
     }
     case OBJ_CLASS: {
-        obj_class_t* class = (obj_class_t*)obj;
-        mark_object((obj_t*)class->name);
+        ObjClass* class = (ObjClass*)obj;
+        mark_object((Obj*)class->name);
         mark_table((&class->methods));
         break;
     }
     // Each closure has a reference to the bare function it wraps,
     // as well as an array of pointers to the upvalues it captures.
     case OBJ_CLOSURE: {
-        obj_closure_t* closure = (obj_closure_t*)obj;
-        mark_object((obj_t*)closure->function);
+        ObjClosure* closure = (ObjClosure*)obj;
+        mark_object((Obj*)closure->function);
 
         for (int i = 0; i < closure->upvalue_count; i++)
-            mark_object((obj_t*)closure->upvalues[i]);
+            mark_object((Obj*)closure->upvalues[i]);
 
         break;
     }
     case OBJ_FUNC: {
-        obj_func_t* func = (obj_func_t*)obj;
+        ObjFun* func = (ObjFun*)obj;
         // Deals with the string object containing the function's name.
-        mark_object((obj_t*)func->name);
+        mark_object((Obj*)func->name);
         // Marks the function's constant table values.
         mark_array(&func->chunk.constants);
         break;
@@ -103,8 +103,8 @@ static void blacken_object(obj_t* obj)
     // If an instance is alive, both its class and its instance
     // fields should be marked.
     case OBJ_INSTANCE: {
-        obj_instance_t* instance = (obj_instance_t*)obj;
-        mark_object((obj_t*)instance->class);
+        ObjInst* instance = (ObjInst*)obj;
+        mark_object((Obj*)instance->class);
         mark_table(&instance->fields);
         break;
     }
@@ -116,27 +116,27 @@ static void blacken_object(obj_t* obj)
     case OBJ_UPVALUE:
         // When an upvalue is closed, it contains a reference
         // to the closed-over value.
-        mark_value(((obj_upvalue_t*)obj)->closed);
+        mark_value(((ObjUpvalue*)obj)->closed);
         break;
     }
 }
 
-void table_remove_white(table_t* table)
+void table_remove_white(Table* table)
 {
     for (int i = 0; i < table->size; i++) {
-        entry_t* entry = &table->entries[i];
+        Entry* entry = &table->entries[i];
 
         if (entry->key && !entry->key->obj.is_marked)
             table_delete(table, entry->key);
     }
 }
 
-void mark_table(table_t* table)
+void mark_table(Table* table)
 {
     for (int i = 0; i < table->size; i++) {
-        entry_t* entry = &table->entries[i];
+        Entry* entry = &table->entries[i];
 
-        mark_object((obj_t*)entry->key);
+        mark_object((Obj*)entry->key);
         mark_value(entry->value);
     }
 }
@@ -144,16 +144,16 @@ void mark_table(table_t* table)
 /// @brief Marks all allocations directly reachable by the program.
 static void mark_roots()
 {
-    for (value_t* slot = vm.stack; slot < vm.stack_top; slot++)
+    for (Value* slot = vm.stack; slot < vm.stack_top; slot++)
         mark_value(*slot);
     // Each call frame contains a pointer to the cosure being
     // called. The vm uses those pointers to access constants
     // and upvalues, so closures should also be marked.
     for (int i = 0; i < vm.frame_count; i++)
-        mark_object((obj_t*)vm.frames[i].closure);
+        mark_object((Obj*)vm.frames[i].closure);
 
-    for (obj_upvalue_t* upvalue = vm.open_upvalues; upvalue; upvalue = upvalue->next)
-        mark_object((obj_t*)upvalue);
+    for (ObjUpvalue* upvalue = vm.open_upvalues; upvalue; upvalue = upvalue->next)
+        mark_object((Obj*)upvalue);
 
     // Global variables are also a source of roots.
     mark_table(&vm.globals);
@@ -165,15 +165,15 @@ static void mark_roots()
 static void trace_references()
 {
     while (vm.gray_count > 0) {
-        obj_t* obj = vm.gray_stack[--vm.gray_count];
+        Obj* obj = vm.gray_stack[--vm.gray_count];
         blacken_object(obj);
     }
 }
 
 static void sweep()
 {
-    obj_t* prev = NULL;
-    obj_t* obj = vm.objects;
+    Obj* prev = NULL;
+    Obj* obj = vm.objects;
     // Walks the linked list of every object in the heap,
     // stored in the virtual machine.
     while (obj) {
@@ -187,7 +187,7 @@ static void sweep()
         } else {
             // If an object is unmarked, it is unlinked
             // from the list.
-            obj_t* white = obj;
+            Obj* white = obj;
             obj = obj->next;
 
             if (prev) {

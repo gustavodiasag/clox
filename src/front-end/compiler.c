@@ -13,16 +13,16 @@
 #include "debug.h"
 #endif
 
-parser_t parser;
-compiler_t* current = NULL;
+Parser parser;
+Compiler* current = NULL;
 
 // Stores all the bytecode generated during compilation.
-chunk_t* compiling_chunk;
+Chunk* compiling_chunk;
 
 // Specifies the functions to compile a prefix expression starting with
 // the entry token, an infix expression whose left operand is followed
 // by the entry token and the token's level of precedence.
-parse_rule_t rules[] = {
+ParseRule rules[] = {
     [TOKEN_LEFT_PAREN] = {grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LEFT_BRACE] = {NULL, NULL, PREC_NONE},
@@ -64,7 +64,7 @@ parse_rule_t rules[] = {
     [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE}};
 
-static chunk_t* current_chunk()
+static Chunk* current_chunk()
 {
     return &current->func->chunk;
 }
@@ -72,7 +72,7 @@ static chunk_t* current_chunk()
 /// @brief Outputs a syntax error occurred at the specified token.
 /// @param token
 /// @param message description
-static void error_at(token_t* token, const char* message)
+static void error_at(Token* token, const char* message)
 {
     if (parser.panic)
         return;
@@ -123,7 +123,7 @@ static void advance()
 /// @brief Expects the specified token to be consumed, advancing the parser.
 /// @param type
 /// @param message thrown as an error description if the token is not found
-static void consume(token_type_t type, const char* message)
+static void consume(TokenType type, const char* message)
 {
     if (parser.current.type == type) {
         advance();
@@ -136,7 +136,7 @@ static void consume(token_type_t type, const char* message)
 /// @brief Looks for the given token without consuming it.
 /// @param type which kind of token
 /// @return whether the current token is the same as the given one
-static bool check(token_type_t type)
+static bool check(TokenType type)
 {
     return parser.current.type == type;
 }
@@ -144,7 +144,7 @@ static bool check(token_type_t type)
 /// @brief Consumes the current token if it has the given type.
 /// @param type token type
 /// @return whether the token was matched or not
-static bool match(token_type_t type)
+static bool match(TokenType type)
 {
     if (parser.current.type != type)
         return false;
@@ -205,7 +205,7 @@ static void emit_return()
 /// @brief Adds an entry for the value to the chunk's constant table.
 /// @param value
 /// @return constant's position at the constant table
-static uint8_t make_constant(value_t value)
+static uint8_t make_constant(Value value)
 {
     int constant = add_constant(current_chunk(), value);
 
@@ -219,7 +219,7 @@ static uint8_t make_constant(value_t value)
 
 /// @brief Emits the operational code related to a constant value.
 /// @param value
-static void emit_constant(value_t value)
+static void emit_constant(Value value)
 {
     emit_bytes(OP_CONSTANT, make_constant(value));
 }
@@ -240,7 +240,7 @@ static void patch_jump(int offset)
 /// @brief Initializes the compiler with the global scope.
 /// @param compiler current compiler
 /// @param type top-level scope
-static void init_compiler(compiler_t* compiler, func_type_t type)
+static void init_compiler(Compiler* compiler, FunType type)
 {
     compiler->enclosing = current;
     compiler->func = NULL;
@@ -256,17 +256,17 @@ static void init_compiler(compiler_t* compiler, func_type_t type)
             copy_str(parser.previous.start, parser.previous.length);
     }
 
-    local_t* local = &current->locals[current->local_count++];
+    Local* local = &current->locals[current->local_count++];
     local->depth = 0;
     local->is_captured = false;
     local->name.start = "";
     local->name.length = 0;
 }
 
-static obj_func_t* end_compiler()
+static ObjFun* end_compiler()
 {
     emit_return();
-    obj_func_t* func = current->func;
+    ObjFun* func = current->func;
 #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error)
         disassemble_chunk(current_chunk(), (func->name) ? func->name->chars : "<script>");
@@ -302,11 +302,11 @@ static void end_scope()
     }
 }
 
-obj_func_t* compile(const char* source)
+ObjFun* compile(const char* source)
 {
     init_scanner(source);
 
-    compiler_t compiler;
+    Compiler compiler;
     init_compiler(&compiler, TYPE_SCRIPT);
 
     parser.had_error = false;
@@ -317,7 +317,7 @@ obj_func_t* compile(const char* source)
     while (!match(TOKEN_EOF))
         declaration();
 
-    obj_func_t* func = end_compiler();
+    ObjFun* func = end_compiler();
 
     return (parser.had_error) ? NULL : func;
 }
@@ -328,21 +328,21 @@ void mark_compiler_roots()
     // and its constant table. If the garbage collection is triggered while
     // compilation, any values accessible by the compiler need to be treated
     // as roots.
-    compiler_t* compiler = current;
+    Compiler* compiler = current;
 
     while (compiler) {
-        mark_object((obj_t*)compiler->func);
+        mark_object((Obj*)compiler->func);
         compiler = compiler->enclosing;
     }
 }
 
 /// @brief Parses a token considering the level of precedence specified.
 /// @param precedence
-static void parse_precedence(precedence_t precedence)
+static void parse_precedence(Precedence precedence)
 {
     advance();
 
-    parse_fn_t prefix_rule = rules[parser.previous.type].prefix;
+    ParseFun prefix_rule = rules[parser.previous.type].prefix;
 
     if (prefix_rule == NULL) {
         error("Expect expression.");
@@ -359,7 +359,7 @@ static void parse_precedence(precedence_t precedence)
     while (precedence <= rules[parser.current.type].precedence) {
         advance();
 
-        parse_fn_t infix_rule = rules[parser.previous.type].infix;
+        ParseFun infix_rule = rules[parser.previous.type].infix;
         infix_rule(can_assign);
     }
 
@@ -450,7 +450,7 @@ static void or_(bool can_assign)
 /// @brief Adds the given token's lexeme to the chunk's constant table as a string.
 /// @param name variable name
 /// @return position of the string in the constant table
-static uint8_t identifier_const(token_t* name)
+static uint8_t identifier_const(Token* name)
 {
     return make_constant(OBJ_VAL(copy_str(name->start, name->length)));
 }
@@ -459,7 +459,7 @@ static uint8_t identifier_const(token_t* name)
 /// @param a first variable
 /// @param b second variable
 /// @return whether the variables are the same
-static bool identifier_equal(token_t* a, token_t* b)
+static bool identifier_equal(Token* a, Token* b)
 {
     if (a->length != b->length)
         return false;
@@ -471,14 +471,14 @@ static bool identifier_equal(token_t* a, token_t* b)
 /// @param compiler
 /// @param name variable name
 /// @return index of the given local variable
-static int resolve_local(compiler_t* compiler, token_t* name)
+static int resolve_local(Compiler* compiler, Token* name)
 {
     // The locals array is traversed backwards so that the last
     // declared variable with the expected identifier is found,
     // ensuring that inner variables correcly shadow the ones
     // with the same name in surrounding scopes.
     for (int i = compiler->local_count - 1; i >= 0; i--) {
-        local_t* local = &compiler->locals[i];
+        Local* local = &compiler->locals[i];
 
         if (identifier_equal(name, &local->name)) {
             if (local->depth == -1)
@@ -496,7 +496,7 @@ static int resolve_local(compiler_t* compiler, token_t* name)
 /// @param index variable's table position
 /// @param is_local whether is local or global
 /// @return index of the created upvalue in the function's upvalue list
-static int add_upvalue(compiler_t* compiler, uint8_t index, bool is_local)
+static int add_upvalue(Compiler* compiler, uint8_t index, bool is_local)
 {
     int upvalue_count = compiler->func->upvalue_count;
     // A closure may reference the same variable in a surrounding function
@@ -504,7 +504,7 @@ static int add_upvalue(compiler_t* compiler, uint8_t index, bool is_local)
     // function already has an upvalue that closes over that variable
     // avoids unnecessary use of memory.
     for (int i = 0; i < upvalue_count; i++) {
-        upvalue_t* upvalue = &compiler->upvalues[i];
+        UpValue* upvalue = &compiler->upvalues[i];
 
         if (upvalue->index == index && upvalue->is_local == is_local)
             return i;
@@ -525,7 +525,7 @@ static int add_upvalue(compiler_t* compiler, uint8_t index, bool is_local)
 /// @param compiler provides access to the surrounding functions linked-list
 /// @param name variable name
 /// @return variable index in the function's compiler locals table
-static int resolve_upvalue(compiler_t* compiler, token_t* name)
+static int resolve_upvalue(Compiler* compiler, Token* name)
 {
     // Top-level function contains only global variables.
     if (!compiler->enclosing)
@@ -549,14 +549,14 @@ static int resolve_upvalue(compiler_t* compiler, token_t* name)
 
 /// @brief Initializes a local variable in the compiler's array of variables.
 /// @param name variable name
-static void add_local(token_t name)
+static void add_local(Token name)
 {
     if (current->local_count == UINT8_COUNT) {
         error("Too many variables in scope.");
         return;
     }
 
-    local_t* local = &current->locals[current->local_count++];
+    Local* local = &current->locals[current->local_count++];
     local->name = name;
     local->depth = -1;
     local->is_captured = false;
@@ -568,11 +568,11 @@ static void declare_var()
     if (current->scope_depth == 0)
         return;
 
-    token_t* name = &parser.previous;
+    Token* name = &parser.previous;
     // Checks for an existing variable with the same name at the
     // same scope level.
     for (int i = current->local_count - 1; i >= 0; i--) {
-        local_t* local = &current->locals[i];
+        Local* local = &current->locals[i];
 
         if (local->depth != -1 && local->depth < current->scope_depth)
             break;
@@ -602,7 +602,7 @@ static uint8_t parse_var(const char* error)
 /// @brief Generates the instruction to load a variable with that name.
 /// @param name variable name
 /// @param can_assign whether to consider assigment or not
-static void named_variable(token_t name, bool can_assign)
+static void named_variable(Token name, bool can_assign)
 {
     uint8_t get_op, set_op;
     int var = resolve_local(current, &name);
@@ -654,13 +654,13 @@ static void block()
 
 /// @brief Parses a function with its corresponding parameters and statements.
 /// @param type whether the function is top-level or not
-static void function(func_type_t type)
+static void function(FunType type)
 {
     // To handle the compilation of multiple nested functions, a separate compiler
     // is created for each of them. Initializing a function's compiler sets it to
     // be the current one, so when compiling the function's body, all of the
     // emitted bytecode is written to the chunk owned by the new compiler.
-    compiler_t compiler;
+    Compiler compiler;
     init_compiler(&compiler, type);
     begin_scope();
 
@@ -683,7 +683,7 @@ static void function(func_type_t type)
     consume(TOKEN_LEFT_BRACE, "Expect '{' before function body");
     block();
     // Yields the newly compiled function object.
-    obj_func_t* function = end_compiler();
+    ObjFun* function = end_compiler();
 
     emit_bytes(OP_CLOSURE, make_constant(OBJ_VAL(function)));
 
@@ -708,7 +708,7 @@ static void method()
 
     uint8_t constant = identifier_const(&parser.previous);
 
-    func_type_t type = TYPE_FUNC;
+    FunType type = TYPE_FUNC;
     // Emits the code to create a closure object and leave it on top of
     // the stack at runtime.
     function(type);
@@ -719,7 +719,7 @@ static void method()
 static void class_declaration()
 {
     consume(TOKEN_IDENTIFIER, "Expect class name.");
-    token_t class_name = parser.previous;
+    Token class_name = parser.previous;
 
     uint8_t name = identifier_const(&parser.previous);
     declare_var();
@@ -1007,13 +1007,13 @@ static void grouping(bool can_assign)
 /// @param can_assign whether to consider assigment or not
 static void binary(bool can_assign)
 {
-    token_type_t operator_type = parser.previous.type;
-    parse_rule_t* rule = &rules[operator_type];
+    TokenType operator_type = parser.previous.type;
+    ParseRule* rule = &rules[operator_type];
 
     // A higher precedence level is used because binary operators of the same
     // type are left-associative, so if parse_precedence finds further tokens
     // with the same level of precedence, it does not prioritizes them.
-    parse_precedence((precedence_t)(rule->precedence + 1));
+    parse_precedence((Precedence)(rule->precedence + 1));
 
     switch (operator_type) {
     case TOKEN_BANG_EQUAL:
@@ -1079,7 +1079,7 @@ static void dot(bool can_assign)
 /// @param can_assign whether to consider assigment or not
 static void unary(bool can_assign)
 {
-    token_type_t operator_type = parser.previous.type;
+    TokenType operator_type = parser.previous.type;
 
     parse_precedence(PREC_UNARY); // Parse the operand.
 
