@@ -42,7 +42,8 @@ typedef struct {
 // body of a function.
 typedef enum {
     TYPE_FUNC,
-    TYPE_SCRIPT
+    TYPE_METHOD,
+    TYPE_SCRIPT,
 } FunType;
 
 typedef struct Compiler {
@@ -99,5 +100,6 @@ static void and_(bool can_assign);
 static void or_(bool can_assign);
 static void call(bool can_assign);
 static void dot(bool can_assign);
+static void this(bool can_assign);
 
 #endif

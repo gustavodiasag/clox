@@ -120,7 +120,12 @@ static bool call_value(Value callee, int args)
         switch (OBJ_TYPE(callee)) {
         case OBJ_BOUND_METHOD: {
             ObjBoundMethod* bound = AS_BOUND_METHOD(callee);
-            
+            // When a method is called, the top of the stack
+            // contains all of the arguments, and then just
+            // under those is the closure of the called method.
+            // The receiver is then inserted into that slot.
+            vm.stack_top[-args - 1] = bound->receiver;
+
             return init_frame(bound->method, args);
         }
         // If the value being called is a class, then it
@@ -388,10 +393,11 @@ static InterpretResult run()
                 push(value);
                 break;
             }
-            // Fields take proprity over methods, shadowing them,
+            // Fields take priority over methods, shadowing them
             // if the instance doesn't have a field with the
             // property name, then it might refer to a method.
             if (!bind_method(instance->class, name)) {
+                // If it couldn't be found, that means a runtime error.
                 return INTERPRET_RUNTIME_ERROR;
             }
             break;

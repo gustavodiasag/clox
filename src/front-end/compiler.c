@@ -57,7 +57,7 @@ ParseRule rules[] = {
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_THIS] = {NULL, NULL, PREC_NONE},
+    [TOKEN_THIS] = {this, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
@@ -259,8 +259,14 @@ static void init_compiler(Compiler* compiler, FunType type)
     Local* local = &current->locals[current->local_count++];
     local->depth = 0;
     local->is_captured = false;
-    local->name.start = "";
-    local->name.length = 0;
+
+    if (type != TYPE_FUNC) {
+        local->name.start = "this";
+        local->name.length = 4;
+    } else {
+        local->name.start = "";
+        local->name.length = 0;
+    }
 }
 
 static ObjFun* end_compiler()
@@ -637,6 +643,16 @@ static void variable(bool can_assign)
     named_variable(parser.previous, can_assign);
 }
 
+/// @brief Parses a `this` expression.
+/// @param can_assign whether to consider assignment or not
+static void this(bool can_assign)
+{
+    // When the parser function is called, the `this` token has just
+    // been consumed and is stored as the previous token. No
+    // assignment can be done to `this`, so `false` disallows it.
+    variable(false);
+}
+
 /// @brief Parses an expression.
 static void expression()
 {
@@ -708,7 +724,7 @@ static void method()
 
     uint8_t constant = identifier_const(&parser.previous);
 
-    FunType type = TYPE_FUNC;
+    FunType type = TYPE_METHOD;
     // Emits the code to create a closure object and leave it on top of
     // the stack at runtime.
     function(type);
@@ -765,7 +781,6 @@ static void var_declaration()
     } else {
         emit_byte(OP_NIL);
     }
-
     consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
 
     define_var(var);
