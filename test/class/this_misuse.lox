@@ -1,0 +1,7 @@
+// These two wrong uses should be caught by the compiler.
+
+print this; // At top level.
+
+fun notMethod() {
+    print this; // In a function.
+}
