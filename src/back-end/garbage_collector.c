@@ -72,7 +72,7 @@ static void blacken_object(Obj* obj)
     case OBJ_BOUND_METHOD: {
         ObjBoundMethod* bound = (ObjBoundMethod*) obj;
         mark_value(bound->receiver);
-        mark_object(bound->method);
+        mark_object((Obj*)bound->method);
         break;
     }
     case OBJ_CLASS: {
