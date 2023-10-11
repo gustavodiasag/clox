@@ -185,3 +185,8 @@ Are defined as references that do not protect the referenced object from collect
 >
 > 3. In fact, an initializer is *prohibited* from returning any value at all since the value would never be seen anyway.
 
+# Optimizing bytecode instructions
+
+An usual optimization technique for a bytecode virtual machine is to combine a series of opcodes that tend to happen repeatedly, after the compilation process, so that the overhead of decoding and dispatching each instruction by itself is eliminated at some level. This combination is often called a **superinstruction**, given that it fuses bytecode into one unit that translates to the same behavior as the separated sequence.
+
+The challenge of that approach is determining which instruction sequences are common enough to benefit from this optimization. Every new **superinstruction** claims an opcode for its own use and there are only so many of those to go around. So if too many of them is added, a larger encoding for the opcodes is required, which then increases code size and makes decoding all instructions slower.
