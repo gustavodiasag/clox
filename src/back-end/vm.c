@@ -133,6 +133,18 @@ static bool call_value(Value callee, int args)
         case OBJ_CLASS: {
             ObjClass* class = AS_CLASS(callee);
             vm.stack_top[-args - 1] = OBJ_VAL(new_instance(class));
+            
+            Value initializer;
+            // A class isn't required to have an initializer. If omitted,
+            // the runtime returns the uninitialized instance, but if any
+            // arguments were passed when an instance is initialized when
+            // there's no `init` method, its a runtime error.   
+            if (table_get(&class->methods,  vm.init_string, &initializer)) {
+                return init_frame(AS_CLOSURE(initializer), args);
+            } else if (args != 0) {
+                runtime_err("Expected 0 arguments but got %d.", args);
+                return false;
+            }
 
             return true;
         }
@@ -148,7 +160,8 @@ static bool call_value(Value callee, int args)
             return true;
         }
         default:
-            break; // Non-callable object type.
+            // Non-callable object type.
+            break;
         }
     }
     runtime_err("Only function and classes can be called");
@@ -576,6 +589,9 @@ void init_vm()
     init_table(&vm.globals);
     init_table(&vm.strings);
 
+    vm.init_string = NULL;
+    vm.init_string = copy_str("init", 4);
+
     define_native("clock", clock_native);
 }
 
@@ -583,6 +599,7 @@ void free_vm()
 {
     free_table(&vm.globals);
     free_table(&vm.strings);
+    vm.init_string = NULL;
     free_objs();
 }
 

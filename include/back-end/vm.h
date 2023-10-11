@@ -34,6 +34,8 @@ typedef struct {
     Value* stack_top;
     // Stores all strings created in the program.
     Table strings;
+    // Name of an initializer method in a class.
+    ObjStr* init_string;
     // Stores all global variables created in the program.
     Table globals;
     // List of open upvalues that point to variables on the stack.

@@ -157,8 +157,8 @@ static void mark_roots()
 
     // Global variables are also a source of roots.
     mark_table(&vm.globals);
-
     mark_compiler_roots();
+    mark_object((Obj*)vm.init_string);
 }
 
 /// @brief Traverses the stack of grey objects and their references.
