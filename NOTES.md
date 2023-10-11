@@ -196,3 +196,9 @@ The challenge of that approach is determining which instruction sequences are co
 2. Add an optimized implementation of that pattern.
 
 3. Guard the optimized code with some conditional logic that validates that the pattern actually applies. If it does, the fast option is executed. Otherwise, fall back to a slower but more robust uniptimized behavior.
+
+# Monte Carlo algorithm
+
+A Monte Carlo algorithm is a randomized algorithm whose output may be incorrect with a certain probability.
+
+While the answer returned by a deterministic algorithm is always expected to be correct, this is not the case for these algorithms. For decision problems, they are generally classified as either false-biased or true-biased. A **false-biased** Monte Carlo algorithm is **always correct when it returns false** and a **true-biased**, **always correct when it returns true**.
