@@ -174,3 +174,14 @@ Following this base functionality, mark-sweep works in two phases:
 # Weak references
 
 Are defined as references that do not protect the referenced object from collection by a garbage collector. An object referenced only by weak references is considered weakly reachable, and can be treated as unreachable and so may be collected at any time.
+
+# Instance initializers
+
+> Object-oriented languages ensure that brand new objects are properly set up through constructors, which both produce a new instance and initialize its state. In Lox, the runtime allocates new raw instances, and a class may declare an initializer to set up any fields. Initializers work mostly like normal methods, with a few tweaks:
+>
+> 1. The runtime automatically invokes the initializer method whenever an instance of a class is created.
+>
+> 2. The caller that constructs an instance always gets the instance back after the initializer finishes, regardless of what the initializer function returns. The initializer method doesn't need to explicitly return **this**.
+>
+> 3. In fact, an initializer is *prohibited* from returning any value at all since the value would never be seen anyway.
+
