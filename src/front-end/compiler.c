@@ -224,8 +224,18 @@ static int emit_jump(uint8_t instruction)
 }
 
 static void emit_return()
-{
-    emit_bytes(OP_NIL, OP_RETURN);
+{   
+    // Whenever the compiler emits the implicit return at the end of a
+    // body, the function type is checked to decide whether to insert
+    // the initializer-specific behavior.
+    if (current->type == TYPE_INIT) {
+        // In an initializer, the slot zero is loaded onto the stack,
+        // which contains the instance.
+        emit_bytes(OP_GET_LOCAL, 0);
+    } else {
+        emit_byte(OP_NIL);
+    }
+    emit_byte(OP_RETURN);
 }
 
 /// @brief Adds an entry for the value to the chunk's constant table.
@@ -755,6 +765,11 @@ static void method()
     uint8_t constant = identifier_const(&parser.previous);
 
     FunType type = TYPE_METHOD;
+
+    if (parser.previous.length == 4
+        && !memcmp(parser.previous.start, "init", 4)) {
+        type = TYPE_INIT;
+    }
     // Emits the code to create a closure object and leave it on top of
     // the stack at runtime.
     function(type);
@@ -933,6 +948,10 @@ static void return_stmt()
     if (match(TOKEN_SEMICOLON)) {
         emit_return();
     } else {
+        if (current->type == TYPE_INIT) {
+            error("Can't return a value from an initializer.");
+        }
+        
         expression();
         consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
         emit_byte(OP_RETURN);

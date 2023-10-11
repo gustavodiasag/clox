@@ -42,6 +42,7 @@ typedef struct {
 // body of a function.
 typedef enum {
     TYPE_FUNC,
+    TYPE_INIT,
     TYPE_METHOD,
     TYPE_SCRIPT,
 } FunType;
