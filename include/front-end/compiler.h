@@ -46,23 +46,6 @@ typedef enum {
     TYPE_SCRIPT,
 } FunType;
 
-typedef struct Compiler {
-    // Linked-list used to provide access to the surrounding
-    // compiler and its bytecode chunk.
-    struct Compiler* enclosing;
-    ObjFun* func;
-    FunType type;
-    // Locals that are in scope at each point in the
-    // compilation process.
-    Local locals[UINT8_COUNT];
-    // Tracks how many locals are in scope.
-    int local_count;
-    // Upvalues looked-up by the function being parsed.
-    UpValue upvalues[UINT8_COUNT];
-    // Number of blocks surrounding the code being compiled.
-    int scope_depth;
-} Compiler;
-
 typedef struct {
     Token current;
     Token previous;

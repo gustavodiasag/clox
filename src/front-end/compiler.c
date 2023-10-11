@@ -13,9 +13,35 @@
 #include "debug.h"
 #endif
 
+typedef struct Compiler {
+    // Linked-list used to provide access to the surrounding
+    // compiler and its bytecode chunk.
+    struct Compiler* enclosing;
+    ObjFun* func;
+    FunType type;
+    // Locals that are in scope at each point in the
+    // compilation process.
+    Local locals[UINT8_COUNT];
+    // Tracks how many locals are in scope.
+    int local_count;
+    // Upvalues looked-up by the function being parsed.
+    UpValue upvalues[UINT8_COUNT];
+    // Number of blocks surrounding the code being compiled.
+    int scope_depth;
+} Compiler;
+
+// Forms a linked list from the current innermost class being
+// compiled out through all of the enclosing classes.
+typedef struct ClassCompiler {
+    // Points to a struct representing the current, innermost
+    // class being compiled.
+    struct ClassCompiler* enclosing;
+} ClassCompiler;
+
 Parser parser;
 Compiler* current = NULL;
-
+// Points to the current class being compiled, if any.
+ClassCompiler* current_class = NULL;
 // Stores all the bytecode generated during compilation.
 Chunk* compiling_chunk;
 
@@ -647,6 +673,10 @@ static void variable(bool can_assign)
 /// @param can_assign whether to consider assignment or not
 static void this(bool can_assign)
 {
+    if (!current_class) {
+        error("Can't use 'this' outside of a class.");
+        return;
+    }
     // When the parser function is called, the `this` token has just
     // been consumed and is stored as the previous token. No
     // assignment can be done to `this`, so `false` disallows it.
@@ -742,6 +772,13 @@ static void class_declaration()
 
     emit_bytes(OP_CLASS, name);
     define_var(name);
+
+    // When the compiler begins compiling a class, it pushes a new
+    // `ClassCompiler` onto that implicit linked stack.  
+    ClassCompiler* class_compiler;
+    class_compiler->enclosing = current_class;
+    current_class = &class_compiler;
+
     // Generates code to load a variable with the given name onto the
     // stack. This is useful because it provides a way to reference
     // the class when parsing its methods so that they can be
@@ -754,11 +791,13 @@ static void class_declaration()
     while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
         method();
     }
-
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
     // Considering that a declaration is being parsed, all values
     // stored in the stack during it must be popped out.
     emit_byte(OP_POP);
+
+    // At the end of the class body, the enclosing one is restored.   
+    current_class = current_class->enclosing;
 }
 
 /// @brief Stores a function as a newly declared variable (first-class function).
