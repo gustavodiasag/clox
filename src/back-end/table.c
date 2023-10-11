@@ -50,7 +50,7 @@ static Entry* find_entry(Entry* entries, int size, ObjStr* key)
 
 bool table_get(Table* table, ObjStr* key, Value* value)
 {
-    if (table->count == 0)
+    if (!table->count)
         return false;
 
     Entry* entry = find_entry(table->entries, table->size, key);
@@ -59,7 +59,6 @@ bool table_get(Table* table, ObjStr* key, Value* value)
         return false;
 
     *value = entry->value;
-
     return true;
 }
 

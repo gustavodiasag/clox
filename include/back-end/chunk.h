@@ -35,12 +35,13 @@ typedef enum {
     OP_JUMP_FALSE,
     OP_LOOP,
     OP_CALL,
+    OP_INVOKE,
     OP_CLOSURE,
     OP_CLOSE_UPVALUE,
     OP_CLASS,
     OP_METHOD,
     OP_RETURN
-} OpCode; // FIXME: Add support for `<=`, `!=` and `>=`.
+} OpCode;
 
 // Represents a dynamic array of instructions. Provides dense storage,
 // constant-time indexed lookup and appending to the end of the array.

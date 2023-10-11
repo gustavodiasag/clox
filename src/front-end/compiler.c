@@ -790,8 +790,8 @@ static void class_declaration()
 
     // When the compiler begins compiling a class, it pushes a new
     // `ClassCompiler` onto that implicit linked stack.  
-    ClassCompiler* class_compiler;
-    class_compiler->enclosing = current_class;
+    ClassCompiler class_compiler;
+    class_compiler.enclosing = current_class;
     current_class = &class_compiler;
 
     // Generates code to load a variable with the given name onto the
@@ -951,7 +951,7 @@ static void return_stmt()
         if (current->type == TYPE_INIT) {
             error("Can't return a value from an initializer.");
         }
-        
+
         expression();
         consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
         emit_byte(OP_RETURN);
@@ -1143,6 +1143,10 @@ static void dot(bool can_assign)
     if (can_assign && match(TOKEN_EQUAL)) {
         expression();
         emit_bytes(OP_SET_PROPERTY, name);
+    } else if (match(TOKEN_LEFT_PAREN)) {
+        uint8_t args = arg_list();
+        emit_bytes(OP_INVOKE, name);
+        emit_byte(args);
     } else {
         emit_bytes(OP_GET_PROPERTY, name);
     }

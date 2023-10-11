@@ -169,6 +169,49 @@ static bool call_value(Value callee, int args)
     return false;
 }
 
+/// @brief Combines the virtual machine behavior for the `OP_GET_PROPERTY`
+/// and the `OP_CALL` instructions.
+/// @param class class from which the instance belongs to
+/// @param name method name
+/// @param args amount of arguments passed to the method
+/// @return whether the invocation succeded or not
+static bool invoke_from_class(ObjClass* class, ObjStr* name, int args)
+{
+    Value method;
+    if (!table_get(&class->methods, name, &method)) {
+        runtime_err("Undefined property '%s'.", name->chars);
+        return false;
+    }
+    return init_frame(AS_CLOSURE(method), args);
+}
+
+/// @brief Retrieves the receiver object from the stack and invokes
+/// the method.
+/// @param name method name 
+/// @param args amount of arguments passed to the method
+/// @return whether the invocation succeded or not
+static bool invoke(ObjStr* name, int args)
+{
+    Value receiver = peek(args);
+    // The invoke operation assumes that the object from which
+    // the method was called is an instance, so an invalid type
+    // of value being used turns to be a runtime error.  
+    if (!IS_INSTANCE(receiver)) {
+        runtime_err("Only instances have methods.");
+        return false;
+    }
+    ObjInst* instance = AS_INSTANCE(receiver);
+
+    Value value;
+    if (table_get(&instance->fields, name, &value)) {
+        vm.stack_top[-args - 1] = value;
+        
+        return call_value(value, args);
+    }
+
+    return invoke_from_class(instance->class, name, args);
+}
+
 /// @brief Places the given method in the runtime stack.
 /// @param class contains the method table
 /// @param name method name
@@ -176,12 +219,10 @@ static bool call_value(Value callee, int args)
 static bool bind_method(ObjClass* class, ObjStr* name)
 {
     Value method;
-
     if (!table_get(&class->methods, name, &method)) {
         runtime_err("Undefined property '%s'.", name->chars);
         return false;
     }
-
     ObjBoundMethod* bound = new_bound_method(peek(0), AS_CLOSURE(method));
     pop();
     push(OBJ_VAL(bound));
@@ -507,6 +548,16 @@ static InterpretResult run()
             if (!call_value(peek(args), args))
                 return INTERPRET_RUNTIME_ERROR;
 
+            frame = &vm.frames[vm.frame_count - 1];
+            break;
+        }
+        case OP_INVOKE: {
+            ObjStr* method = READ_STR();
+            int args = READ_BYTE();
+
+            if (!invoke(method, args)) {
+                return INTERPRET_RUNTIME_ERROR;
+            }
             frame = &vm.frames[vm.frame_count - 1];
             break;
         }

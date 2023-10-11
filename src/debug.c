@@ -12,11 +12,28 @@
 static int constant_instruction(const char* name, Chunk* chunk, int offset)
 {
     uint8_t constant = chunk->code[offset + 1];
+
     printf("%-16s %4d '", name, constant);
     print_value(chunk->constants.values[constant]);
     printf("'\n");
     // Takes two bytes, one for the opcode and one for the operand.
     return offset + 2;
+}
+
+/// @brief Prints the property name and argument count of the invocation.
+/// @param name property name
+/// @param chunk contains the instructions to be checked. 
+/// @param offset used to access the specified instruction
+/// @return  the offset of the next instruction
+static int invoke_instruction(const char* name, Chunk* chunk, int offset)
+{
+    uint8_t cons = chunk->code[offset + 1];
+    uint8_t args = chunk->code[offset + 2];
+
+    printf("%-16s (%d args) %4d '", name, args, cons);
+    print_value(chunk->constants.values[cons]);
+    printf("'\n");
+    return offset + 3;
 }
 
 /// @brief Prints the simple structure stored at the given offset.
@@ -37,8 +54,8 @@ static int simple_instruction(const char* name, int offset)
 static int byte_instruction(const char* name, Chunk* chunk, int offset)
 {
     uint8_t slot = chunk->code[offset + 1];
+    
     printf("%-16s %4d\n", name, slot);
-
     return offset + 2;
 }
 
@@ -53,7 +70,6 @@ static int jump_instruction(const char* name, int sign, Chunk* chunk, int offset
     jump |= chunk->code[offset + 2];
 
     printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
-
     return offset + 3;
 }
 
@@ -70,10 +86,11 @@ int disassemble_instruction(Chunk* chunk, int offset)
 {
     printf("%04d ", offset);
 
-    if (offset > 0 && chunk->lines[offset] == chunk->lines[offset - 1])
+    if (offset > 0 && chunk->lines[offset] == chunk->lines[offset - 1]) {
         printf("   | ");
-    else
+    } else {
         printf("%4d ", chunk->lines[offset]);
+    }
 
     uint8_t instruction = chunk->code[offset];
 
@@ -134,6 +151,8 @@ int disassemble_instruction(Chunk* chunk, int offset)
         return jump_instruction("OP_LOOP", -1, chunk, offset);
     case OP_CALL:
         return byte_instruction("OP_CALL", chunk, offset);
+    case OP_INVOKE:
+        return invoke_instruction("OP_INVOKE", chunk, offset);
     case OP_CLOSURE: {
         offset++;
         uint8_t constant = chunk->code[offset++];
