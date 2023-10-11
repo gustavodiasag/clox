@@ -1,0 +1,11 @@
+class Foo {
+    init() {
+        fun f() {
+            print "not a method";
+        }
+        this.field = f;
+    }
+}
+
+var bar = Foo();
+bar.field();
