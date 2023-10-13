@@ -1,0 +1,11 @@
+class Foo {
+    foo() {
+        print "foo";
+    }
+}
+
+class Bar < Foo {
+    bar() {
+        print "bar";
+    }
+}
