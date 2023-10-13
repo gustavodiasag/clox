@@ -596,6 +596,14 @@ static InterpretResult run()
             push(OBJ_VAL(new_class(READ_STR())));
             break;
         }
+        case OP_INHERIT: {
+            Value super = peek(1);
+            ObjClass* sub = AS_CLASS(peek(0));
+            table_add_all(&AS_CLASS(super)->methods, &sub->methods);
+            // Pop subclass. 
+            pop();
+            break;
+        }
         case OP_RETURN: {
             Value result = pop();
             // Closes variables defined in the context of the function's scope,

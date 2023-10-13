@@ -51,7 +51,7 @@ bool table_delete(Table* table, ObjStr* key);
 /// @brief Copies all entries from one table to another.
 /// @param src table containing the entries being transferred
 /// @param dest table receiving the new entries
-void add_all(Table* src, Table* dest);
+void table_add_all(Table* src, Table* dest);
 
 /// @brief Checks for an interned string with the given content.
 /// @param table virtual machine's string table

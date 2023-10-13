@@ -135,13 +135,14 @@ bool table_delete(Table* table, ObjStr* key)
     return true;
 }
 
-void add_all(Table* src, Table* dest)
+void table_add_all(Table* src, Table* dest)
 {
     for (int i = 0; i < src->size; i++) {
         Entry* entry = &src->entries[i];
 
-        if (entry->key)
+        if (entry->key) {
             table_set(dest, entry->key, entry->value);
+        }
     }
 }
 

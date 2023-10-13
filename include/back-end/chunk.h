@@ -4,8 +4,7 @@
 #include "common.h"
 #include "value.h"
 
-// Each instruction has a one-byte operational code that
-// defines its functionality.
+/** One-byte operational code that defines an instruction. */
 typedef enum {
     OP_CONSTANT,
     OP_NIL,
@@ -39,9 +38,10 @@ typedef enum {
     OP_CLOSURE,
     OP_CLOSE_UPVALUE,
     OP_CLASS,
+    OP_INHERIT,
     OP_METHOD,
     OP_RETURN
-} OpCode;
+} OpCode; /* FIXME: briefly describe each operation. */
 
 // Represents a dynamic array of instructions. Provides dense storage,
 // constant-time indexed lookup and appending to the end of the array.

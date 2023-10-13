@@ -48,7 +48,7 @@ Chunk* compiling_chunk;
 // Specifies the functions to compile a prefix expression starting with
 // the entry token, an infix expression whose left operand is followed
 // by the entry token and the token's level of precedence.
-ParseRule rules[] = {
+static ParseRule rules[] = {
     [TOKEN_LEFT_PAREN] = {grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LEFT_BRACE] = {NULL, NULL, PREC_NONE},
@@ -794,6 +794,20 @@ static void class_declaration()
     class_compiler.enclosing = current_class;
     current_class = &class_compiler;
 
+    // After a class name is compiled, if the next token is a `<`, a
+    // superclass clause was found.
+    if (match(TOKEN_LESS)) {
+        consume(TOKEN_IDENTIFIER, "Expect superclass name.");
+        // Looks up the superclass by name and pushed it onto the stack.
+        variable(false);
+
+        if (identifier_equal(&class_name, &parser.previous)) {
+            error("A class can't inherit from itself.");
+        }
+        // Loads the subclass doing the inheriting onto the stack.
+        named_variable(class_name, false);
+        emit_byte(OP_INHERIT);
+    }
     // Generates code to load a variable with the given name onto the
     // stack. This is useful because it provides a way to reference
     // the class when parsing its methods so that they can be
