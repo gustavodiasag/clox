@@ -25,7 +25,7 @@
 #define AS_STR(val) ((ObjStr*)AS_OBJ(val))
 #define AS_CSTR(val) (((ObjStr*)AS_OBJ(val))->chars)
 
-// All heap-allocated components supported in the language.
+// All heap-allocated components in the language.
 typedef enum {
     OBJ_BOUND_METHOD,
     OBJ_CLASS,
@@ -76,7 +76,7 @@ struct ObjStr {
     int length;
     // Each string object stores a hash code for its content.
     uint32_t hash;
-    // Flexible array member, stores the object and its
+    // Flexible array member. Stores the object and its
     // character array in a single contiguous allocation.
     char chars[];
 };
