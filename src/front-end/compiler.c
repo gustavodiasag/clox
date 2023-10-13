@@ -36,6 +36,9 @@ typedef struct ClassCompiler {
     // Points to a struct representing the current, innermost
     // class being compiled.
     struct ClassCompiler* enclosing;
+    // Used to check whether the surrounding class is a subclass
+    // or not.
+    bool has_superclass;
 } ClassCompiler;
 
 Parser parser;
@@ -679,6 +682,15 @@ static void variable(bool can_assign)
     named_variable(parser.previous, can_assign);
 }
 
+static Token synth_token(const char* data)
+{
+    Token token;
+    token.start = data;
+    token.length = (int)strlen(data);
+    
+    return token;
+}
+
 /// @brief Parses a `this` expression.
 /// @param can_assign whether to consider assignment or not
 static void this(bool can_assign)
@@ -789,9 +801,10 @@ static void class_declaration()
     define_var(name);
 
     // When the compiler begins compiling a class, it pushes a new
-    // `ClassCompiler` onto that implicit linked stack.  
+    // `ClassCompiler` onto that implicit linked list stack.  
     ClassCompiler class_compiler;
     class_compiler.enclosing = current_class;
+    class_compiler.has_superclass = false;
     current_class = &class_compiler;
 
     // After a class name is compiled, if the next token is a `<`, a
@@ -804,9 +817,14 @@ static void class_declaration()
         if (identifier_equal(&class_name, &parser.previous)) {
             error("A class can't inherit from itself.");
         }
+        begin_scope();
+        add_local(synth_token("super"));
+        define_var(0);
         // Loads the subclass doing the inheriting onto the stack.
         named_variable(class_name, false);
         emit_byte(OP_INHERIT);
+        
+        class_compiler.has_superclass = true;
     }
     // Generates code to load a variable with the given name onto the
     // stack. This is useful because it provides a way to reference
@@ -824,7 +842,11 @@ static void class_declaration()
     // Considering that a declaration is being parsed, all values
     // stored in the stack during it must be popped out.
     emit_byte(OP_POP);
-
+    // Since a local scope was opened for the superclass variable, it needs to
+    // be closed.
+    if (class_compiler.has_superclass) {
+        end_scope();
+    }
     // At the end of the class body, the enclosing one is restored.   
     current_class = current_class->enclosing;
 }
@@ -1019,7 +1041,8 @@ static void syncronize()
         case TOKEN_PRINT:
         case TOKEN_RETURN:
             return;
-        default:; // Do nothing.
+        default:
+            ; // Do nothing.
         }
 
         advance();
@@ -1151,7 +1174,6 @@ static void call(bool can_assign)
 static void dot(bool can_assign)
 {
     consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
-
     uint8_t name = identifier_const(&parser.previous);
 
     if (can_assign && match(TOKEN_EQUAL)) {

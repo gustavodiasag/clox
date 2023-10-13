@@ -10,7 +10,7 @@
 #include "front-end/compiler.h"
 #include "memory.h"
 
-Vm vm; // FIXME: Should be manipulated through pointers.
+Vm vm;
 
 /// @brief Defines one of the native functions supported by the language.
 /// @param argc number of arguments
@@ -54,7 +54,6 @@ static void runtime_err(const char* format, ...)
             fprintf(stderr, "%s()\n", func->name->chars);
         }
     }
-
     reset_stack();
 }
 
@@ -97,7 +96,6 @@ static bool init_frame(ObjClosure* closure, int args)
         runtime_err("Stack overflow.");
         return false;
     }
-
     CallFrame* frame = &vm.frames[vm.frame_count++];
 
     frame->closure = closure;
@@ -145,7 +143,6 @@ static bool call_value(Value callee, int args)
                 runtime_err("Expected 0 arguments but got %d.", args);
                 return false;
             }
-
             return true;
         }
         case OBJ_CLOSURE:
@@ -164,7 +161,7 @@ static bool call_value(Value callee, int args)
             break;
         }
     }
-    runtime_err("Only function and classes can be called");
+    runtime_err("Only functions and classes can be called.");
 
     return false;
 }
@@ -201,14 +198,12 @@ static bool invoke(ObjStr* name, int args)
         return false;
     }
     ObjInst* instance = AS_INSTANCE(receiver);
-
+    
     Value value;
     if (table_get(&instance->fields, name, &value)) {
         vm.stack_top[-args - 1] = value;
-        
         return call_value(value, args);
     }
-
     return invoke_from_class(instance->class, name, args);
 }
 
@@ -352,7 +347,8 @@ static InterpretResult run()
         }
         printf("\n");
 
-        disassemble_instruction(&frame->closure->function->chunk,
+        disassemble_instruction(
+            &frame->closure->function->chunk,
             (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
         uint8_t instruction;
@@ -532,9 +528,9 @@ static InterpretResult run()
         case OP_JUMP_FALSE: {
             uint16_t offset = READ_SHORT();
 
-            if (is_falsey(peek(0)))
+            if (is_falsey(peek(0))) {
                 frame->ip += offset;
-
+            }
             break;
         }
         case OP_LOOP: {
@@ -545,9 +541,9 @@ static InterpretResult run()
         case OP_CALL: {
             int args = READ_BYTE();
 
-            if (!call_value(peek(args), args))
+            if (!call_value(peek(args), args)) {
                 return INTERPRET_RUNTIME_ERROR;
-
+            }
             frame = &vm.frames[vm.frame_count - 1];
             break;
         }
@@ -584,7 +580,6 @@ static InterpretResult run()
                     closure->upvalues[i] = frame->closure->upvalues[index];
                 }
             }
-
             break;
         }
         case OP_CLOSE_UPVALUE: {
@@ -620,7 +615,6 @@ static InterpretResult run()
                 pop();
                 return INTERPRET_OK;
             }
-
             vm.stack_top = frame->slots;
             push(result);
             frame = &vm.frames[vm.frame_count - 1];
@@ -684,9 +678,9 @@ InterpretResult interpret(const char* source)
 {
     ObjFun* func = compile(source);
 
-    if (!func)
+    if (!func) {
         return INTERPRET_COMPILE_ERROR;
-
+    }
     push(OBJ_VAL(func));
 
     ObjClosure* closure = new_closure(func);
