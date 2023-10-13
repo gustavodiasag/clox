@@ -598,6 +598,11 @@ static InterpretResult run()
         }
         case OP_INHERIT: {
             Value super = peek(1);
+            // An object that is not a class cannot be inherited from.
+            if (!IS_CLASS(super)) {
+                runtime_err("Superclass must be a class.");
+                return INTERPRET_RUNTIME_ERROR;
+            }
             ObjClass* sub = AS_CLASS(peek(0));
             table_add_all(&AS_CLASS(super)->methods, &sub->methods);
             // Pop subclass. 
