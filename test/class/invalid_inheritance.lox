@@ -1,0 +1,3 @@
+var NotClass = "Not a class.";
+
+class Error < NotClass {}
