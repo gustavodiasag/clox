@@ -41,6 +41,22 @@ typedef struct ClassCompiler {
     bool has_superclass;
 } ClassCompiler;
 
+static void expression();
+static void statement();
+static void declaration();
+static void grouping(bool can_assign);
+static void binary(bool can_assign);
+static void unary(bool can_assign);
+static void number(bool can_assign);
+static void literal(bool can_assign);
+static void string(bool can_assign);
+static void variable(bool can_assign);
+static void and_(bool can_assign);
+static void or_(bool can_assign);
+static void call(bool can_assign);
+static void dot(bool can_assign);
+static void this(bool can_assign);
+
 Parser parser;
 Compiler* current = NULL;
 // Points to the current class being compiled, if any.
@@ -142,9 +158,9 @@ static void advance()
     while (true) {
         parser.current = scan_token();
 
-        if (parser.current.type != TOKEN_ERROR)
+        if (parser.current.type != TOKEN_ERROR) {
             break;
-
+        }
         error_at_current(parser.current.start);
     }
 }
@@ -158,7 +174,6 @@ static void consume(TokenType type, const char* message)
         advance();
         return;
     }
-
     error_at_current(message);
 }
 
@@ -175,9 +190,9 @@ static bool check(TokenType type)
 /// @return whether the token was matched or not
 static bool match(TokenType type)
 {
-    if (parser.current.type != type)
+    if (parser.current.type != type) {
         return false;
-
+    }
     advance();
 
     return true;
@@ -207,9 +222,9 @@ static void emit_loop(int loop_start)
 
     int offset = current_chunk()->count - loop_start + 2;
 
-    if (offset > UINT16_MAX)
+    if (offset > UINT16_MAX) {
         error("Loop body too large.");
-
+    }
     emit_byte((offset >> 8) & 0xff);
     emit_byte(offset & 0xff);
 }
@@ -220,7 +235,7 @@ static void emit_loop(int loop_start)
 static int emit_jump(uint8_t instruction)
 {
     emit_byte(instruction);
-    // Two bytes are used for the jump offset operand
+    // Two bytes are used for the jump offset operand.
     emit_bytes(0xff, 0xff);
 
     return current_chunk()->count - 2;
@@ -252,7 +267,6 @@ static uint8_t make_constant(Value value)
         error("Too many constants in one chunk");
         return 0;
     }
-
     return (uint8_t)constant;
 }
 
@@ -269,9 +283,9 @@ static void patch_jump(int offset)
 {
     int jump = current_chunk()->count - offset - 2;
 
-    if (jump > UINT16_MAX)
+    if (jump > UINT16_MAX) {
         error("Too much code to jump over.");
-
+    }
     current_chunk()->code[offset] = (jump >> 8) & 0xff;
     current_chunk()->code[offset + 1] = jump & 0xff;
 }
@@ -294,7 +308,6 @@ static void init_compiler(Compiler* compiler, FunType type)
         current->func->name =
             copy_str(parser.previous.start, parser.previous.length);
     }
-
     Local* local = &current->locals[current->local_count++];
     local->depth = 0;
     local->is_captured = false;
@@ -313,8 +326,10 @@ static ObjFun* end_compiler()
     emit_return();
     ObjFun* func = current->func;
 #ifdef DEBUG_PRINT_CODE
-    if (!parser.had_error)
-        disassemble_chunk(current_chunk(), (func->name) ? func->name->chars : "<script>");
+    if (!parser.had_error) {
+        disassemble_chunk(current_chunk(),
+            (func->name) ? func->name->chars : "<script>");
+    }
 #endif
     // The current compiler pops itself by restoring the previous one.
     current = current->enclosing;
@@ -333,7 +348,8 @@ static void end_scope()
     current->scope_depth--;
 
     // Discards any variable declared at the scope depth that has just ended.
-    while (current->local_count > 0 && current->locals[current->local_count - 1].depth > current->scope_depth) {
+    while (current->local_count > 0 &&
+           current->locals[current->local_count - 1].depth > current->scope_depth) {
         // Local variables occupy slots in the virtual machine's stack, so
         // when going out of scope, the correspondent slot should be freed.
         // However, if a local has been captured by a closure, it must be
@@ -359,9 +375,9 @@ ObjFun* compile(const char* source)
 
     advance();
 
-    while (!match(TOKEN_EOF))
+    while (!match(TOKEN_EOF)) {
         declaration();
-
+    }
     ObjFun* func = end_compiler();
 
     return (parser.had_error) ? NULL : func;
@@ -410,16 +426,17 @@ static void parse_precedence(Precedence precedence)
 
     // If the `=` doesn't get consumed as part of the expression, nothing else
     // is going to consume it.
-    if (can_assign && match(TOKEN_EQUAL))
+    if (can_assign && match(TOKEN_EQUAL)) {
         error("Invalid assignment target.");
+    }
 }
 
 /// @brief Marks that the latest declared variable contains a value.
 static void mark_initialized()
 {
-    if (current->scope_depth == 0)
+    if (current->scope_depth == 0) {
         return;
-
+    }
     current->locals[current->local_count - 1].depth = current->scope_depth;
 }
 
@@ -431,7 +448,6 @@ static void define_var(uint8_t var)
         mark_initialized();
         return;
     }
-
     emit_bytes(OP_GLOBAL, var);
 }
 
@@ -447,9 +463,9 @@ static uint8_t arg_list()
             expression();
             // Since the amount of arguments is stored in a single byte,
             // functions can't receive more than 255 parameters.
-            if (args == UINT8_MAX)
+            if (args == UINT8_MAX) {
                 error("Number of arguments exceeded.");
-
+            }
             args++;
         } while (match(TOKEN_COMMA));
     }
@@ -506,9 +522,9 @@ static uint8_t identifier_const(Token* name)
 /// @return whether the variables are the same
 static bool identifier_equal(Token* a, Token* b)
 {
-    if (a->length != b->length)
+    if (a->length != b->length) {
         return false;
-
+    }
     return memcmp(a->start, b->start, a->length) == 0;
 }
 
@@ -526,9 +542,9 @@ static int resolve_local(Compiler* compiler, Token* name)
         Local* local = &compiler->locals[i];
 
         if (identifier_equal(name, &local->name)) {
-            if (local->depth == -1)
+            if (local->depth == -1) {
                 error("Can't read variable in its own initializer");
-
+            }
             return i;
         }
     }
@@ -551,15 +567,15 @@ static int add_upvalue(Compiler* compiler, uint8_t index, bool is_local)
     for (int i = 0; i < upvalue_count; i++) {
         UpValue* upvalue = &compiler->upvalues[i];
 
-        if (upvalue->index == index && upvalue->is_local == is_local)
+        if (upvalue->index == index && upvalue->is_local == is_local) {
             return i;
+        }
     }
 
     if (upvalue_count == UINT8_COUNT) {
         error("Too many closure variables in function.");
         return 0;
     }
-
     compiler->upvalues[upvalue_count].is_local = is_local;
     compiler->upvalues[upvalue_count].index = index;
 
@@ -573,22 +589,21 @@ static int add_upvalue(Compiler* compiler, uint8_t index, bool is_local)
 static int resolve_upvalue(Compiler* compiler, Token* name)
 {
     // Top-level function contains only global variables.
-    if (!compiler->enclosing)
+    if (!compiler->enclosing) {
         return -1;
-
+    }
     int local = resolve_local(compiler->enclosing, name);
-
+    
     if (local != -1) {
         compiler->enclosing->locals[local].is_captured = true;
 
         return add_upvalue(compiler, (uint8_t)local, true);
     }
-
     int upvalue = resolve_upvalue(compiler->enclosing, name);
-
-    if (upvalue != -1)
+    
+    if (upvalue != -1) {
         return add_upvalue(compiler, (uint8_t)upvalue, false);
-
+    }
     return -1;
 }
 
@@ -600,7 +615,6 @@ static void add_local(Token name)
         error("Too many variables in scope.");
         return;
     }
-
     Local* local = &current->locals[current->local_count++];
     local->name = name;
     local->depth = -1;
@@ -610,22 +624,22 @@ static void add_local(Token name)
 /// @brief Records the existence of a local variable.
 static void declare_var()
 {
-    if (current->scope_depth == 0)
+    if (current->scope_depth == 0) {
         return;
-
+    }
     Token* name = &parser.previous;
     // Checks for an existing variable with the same name at the
     // same scope level.
     for (int i = current->local_count - 1; i >= 0; i--) {
         Local* local = &current->locals[i];
 
-        if (local->depth != -1 && local->depth < current->scope_depth)
+        if (local->depth != -1 && local->depth < current->scope_depth) {
             break;
-
-        if (identifier_equal(name, &local->name))
+        }
+        if (identifier_equal(name, &local->name)) {
             error("Already a variable with this name in this scope.");
+        }
     }
-
     add_local(*name);
 }
 
@@ -638,9 +652,9 @@ static uint8_t parse_var(const char* error)
 
     declare_var();
     // At runtime, local variables aren't looked up by name.
-    if (current->scope_depth > 0)
+    if (current->scope_depth > 0) {
         return 0;
-
+    }
     return identifier_const(&parser.previous);
 }
 
@@ -714,9 +728,11 @@ static void expression()
 /// @brief Parses declarations and statements nested in a block.
 static void block()
 {
-    while (parser.current.type != TOKEN_RIGHT_BRACE && parser.current.type != TOKEN_EOF)
+    while (parser.current.type != TOKEN_RIGHT_BRACE &&
+           parser.current.type != TOKEN_EOF)
+    {
         declaration();
-
+    }
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
@@ -737,8 +753,9 @@ static void function(FunType type)
     if (!check(TOKEN_RIGHT_PAREN)) {
         do {
             current->func->arity++;
-            if (current->func->arity > UINT8_MAX)
+            if (current->func->arity > UINT8_MAX) {
                 error_at_current("Number of parameters exceeded.");
+            }
             // Semantically, a parameter is simply a local variable declared
             // in the outermost lexical scope of the function body.
             uint8_t constant = parse_var("Expect parameter name.");
@@ -775,11 +792,11 @@ static void method()
     consume(TOKEN_IDENTIFIER, "Expect method name.");
 
     uint8_t constant = identifier_const(&parser.previous);
-
     FunType type = TYPE_METHOD;
 
-    if (parser.previous.length == 4
-        && !memcmp(parser.previous.start, "init", 4)) {
+    if (parser.previous.length == 4 &&
+        !memcmp(parser.previous.start, "init", 4))
+    {
         type = TYPE_INIT;
     }
     // Emits the code to create a closure object and leave it on top of
@@ -803,8 +820,8 @@ static void class_declaration()
     // When the compiler begins compiling a class, it pushes a new
     // `ClassCompiler` onto that implicit linked list stack.  
     ClassCompiler class_compiler;
-    class_compiler.enclosing = current_class;
     class_compiler.has_superclass = false;
+    class_compiler.enclosing = current_class;
     current_class = &class_compiler;
 
     // After a class name is compiled, if the next token is a `<`, a
@@ -872,7 +889,6 @@ static void var_declaration()
         emit_byte(OP_NIL);
     }
     consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
-
     define_var(var);
 }
 
@@ -887,7 +903,6 @@ static void expr_stmt()
 static void for_stmt()
 {
     begin_scope();
-
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
 
     if (match(TOKEN_SEMICOLON)) {
@@ -897,9 +912,7 @@ static void for_stmt()
     } else {
         expr_stmt();
     }
-
     int loop_start = current_chunk()->count;
-
     int exit_jump = -1;
 
     if (!match(TOKEN_SEMICOLON)) {
@@ -922,7 +935,6 @@ static void for_stmt()
         loop_start = inc_start;
         patch_jump(body_jump);
     }
-
     statement();
     emit_loop(loop_start);
 
@@ -931,7 +943,6 @@ static void for_stmt()
         patch_jump(exit_jump);
         emit_byte(OP_POP);
     }
-
     end_scope();
 }
 
@@ -951,14 +962,13 @@ static void if_stmt()
     // from the stack after the statement is evaluated.
     emit_byte(OP_POP);
     statement();
-
     patch_jump(jump);
 
     int else_jump = emit_jump(OP_JUMP);
 
-    if (match(TOKEN_ELSE))
+    if (match(TOKEN_ELSE)) {
         statement();
-
+    }
     patch_jump(else_jump);
 }
 
@@ -975,9 +985,9 @@ static void return_stmt()
 {
     // Having a `return` statement outside of any function is considered
     // as a compile-time error.
-    if (current->type == TYPE_SCRIPT)
+    if (current->type == TYPE_SCRIPT) {
         error("Can't return from top-level code.");
-
+    }
     // The return value expression is optional, so the parser looks
     // for a semicolon token to tell if a value was provided. If
     // there is no return value, the statement implicitly returns nil.
@@ -987,7 +997,6 @@ static void return_stmt()
         if (current->type == TYPE_INIT) {
             error("Can't return a value from an initializer.");
         }
-
         expression();
         consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
         emit_byte(OP_RETURN);
@@ -1028,9 +1037,9 @@ static void syncronize()
         // Statement boudaries are used as the point of syncronization.
         // A boundary is detected either by a token that ends or begins
         // a statement.
-        if (parser.previous.type == TOKEN_SEMICOLON)
+        if (parser.previous.type == TOKEN_SEMICOLON) {
             return;
-
+        }
         switch (parser.current.type) {
         case TOKEN_CLASS:
         case TOKEN_FUN:
@@ -1044,7 +1053,6 @@ static void syncronize()
         default:
             ; // Do nothing.
         }
-
         advance();
     }
 }
@@ -1061,11 +1069,11 @@ static void declaration()
     } else {
         statement();
     }
-
     // If a compile error is detected while parsing the
     // previous statement, panic mode is entered.
-    if (parser.panic)
+    if (parser.panic) {
         syncronize();
+    }
 }
 
 /// @brief Parses a single statement.
@@ -1095,7 +1103,6 @@ static void statement()
 static void number(bool can_assign)
 {
     double value = strtod(parser.previous.start, NULL);
-
     emit_constant(NUM_VAL(value));
 }
 
@@ -1119,7 +1126,6 @@ static void binary(bool can_assign)
 {
     TokenType operator_type = parser.previous.type;
     ParseRule* rule = &rules[operator_type];
-
     // A higher precedence level is used because binary operators of the same
     // type are left-associative, so if parse_precedence finds further tokens
     // with the same level of precedence, it does not prioritizes them.
