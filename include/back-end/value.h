@@ -3,19 +3,27 @@
 
 #include "common.h"
 
-#define BOOL_VAL(val) ((Value){VAL_BOOL, {.boolean = val}})
-#define NIL_VAL ((Value){VAL_NIL, {.number = 0}})
-#define NUM_VAL(val) ((Value){VAL_NUM, {.number = val}})
+#define BOOL_VAL(val)   ((Value){VAL_BOOL, {.boolean = val}})
+
+#define NIL_VAL         ((Value){VAL_NIL, {.number = 0}})
+
+#define NUM_VAL(val)    ((Value){VAL_NUM, {.number = val}})
+
 #define OBJ_VAL(object) ((Value){VAL_OBJ, {.obj = (Obj*)object}})
 
-#define IS_BOOL(val) ((val).type == VAL_BOOL)
-#define IS_NIL(val) ((val).type == VAL_NIL)
-#define IS_NUM(val) ((val).type == VAL_NUM)
-#define IS_OBJ(val) ((val).type == VAL_OBJ)
+#define IS_BOOL(val)    ((val).type == VAL_BOOL)
 
-#define AS_BOOL(val) ((val).as.boolean)
-#define AS_NUM(val) ((val).as.number)
-#define AS_OBJ(val) ((val).as.obj)
+#define IS_NIL(val)     ((val).type == VAL_NIL)
+
+#define IS_NUM(val)     ((val).type == VAL_NUM)
+
+#define IS_OBJ(val)     ((val).type == VAL_OBJ)
+
+#define AS_BOOL(val)    ((val).as.boolean)
+
+#define AS_NUM(val)     ((val).as.number)
+
+#define AS_OBJ(val)     ((val).as.obj)
 
 // All types supported in the language.
 typedef enum {
@@ -35,21 +43,24 @@ typedef struct Obj Obj;
 typedef struct ObjStr ObjStr;
 
 // Tagged union representing a type and its correspondent value.
-typedef struct {
-    ValueType type;
-    union {
-        bool boolean;
-        double number;
+typedef struct
+{
+    ValueType   type;
+    union
+    {
+        bool    boolean;
+        double  number;
         // A value whose state lives on the heap memory.
-        Obj* obj;
+        Obj*    obj;
     } as;
 } Value;
 
 //  List of values that appear as literals in the program.
-typedef struct {
-    int capacity;
-    int count;
-    Value* values;
+typedef struct
+{
+    int     capacity;
+    int     count;
+    Value*  values;
 } ValueArray;
 
 // TODO: Description.

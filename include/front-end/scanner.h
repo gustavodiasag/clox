@@ -3,13 +3,14 @@
 
 #include "token.h"
 
-typedef struct {
+typedef struct
+{
     // Beginning of the current lexeme.
     const char* start;
     // Points to the current character being looked at.
     const char* current;
     // Used for error reporting.
-    int line;
+    int         line;
 } Scanner;
 
 // TODO: Description.

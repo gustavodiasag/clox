@@ -6,7 +6,8 @@
 
 typedef void (*ParseFun)(bool can_assign);
 
-typedef enum {
+typedef enum
+{
     PREC_NONE,
     PREC_ASSIGN,
     PREC_OR,
@@ -20,7 +21,8 @@ typedef enum {
     PREC_PRIMARY
 } Precedence;
 
-typedef struct {
+typedef struct
+{
     // Variable name.
     Token name;
     // Records the scope depth of the block where
@@ -30,7 +32,8 @@ typedef struct {
     bool is_captured;
 } Local;
 
-typedef struct {
+typedef struct
+{
     // Stores which local slot the upvalue is capturing.
     uint8_t index;
     // TODO: description.
@@ -40,14 +43,16 @@ typedef struct {
 // Used by the compiler to detect whether the code being
 // processed corresponds to the top-level program or the
 // body of a function.
-typedef enum {
+typedef enum
+{
     TYPE_FUNC,
     TYPE_INIT,
     TYPE_METHOD,
     TYPE_SCRIPT,
 } FunType;
 
-typedef struct {
+typedef struct
+{
     Token current;
     Token previous;
     // Records whether any errors ocurred during compilation.
@@ -57,7 +62,8 @@ typedef struct {
     bool panic;
 } Parser;
 
-typedef struct {
+typedef struct
+{
     ParseFun prefix;
     ParseFun infix;
     Precedence precedence;
@@ -68,22 +74,5 @@ ObjFun* compile(const char* source);
 
 /// @brief Marks objects allocated on the heap by the compiler.
 void mark_compiler_roots();
-
-// TODO: Refactor.
-static void expression();
-static void statement();
-static void declaration();
-static void grouping(bool can_assign);
-static void binary(bool can_assign);
-static void unary(bool can_assign);
-static void number(bool can_assign);
-static void literal(bool can_assign);
-static void string(bool can_assign);
-static void variable(bool can_assign);
-static void and_(bool can_assign);
-static void or_(bool can_assign);
-static void call(bool can_assign);
-static void dot(bool can_assign);
-static void this(bool can_assign);
 
 #endif

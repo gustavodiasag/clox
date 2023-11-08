@@ -5,7 +5,8 @@
 #include "value.h"
 
 /** Opcodes supported by the language's virtual machine. */
-typedef enum {
+typedef enum
+{
     OP_CONSTANT,
     OP_NIL,
     OP_TRUE,
@@ -45,7 +46,8 @@ typedef enum {
 
 // FIXME: Represents a dynamic array of instructions. Provides dense storage,
 // constant-time indexed lookup and appending to the end of the array.
-typedef struct _Chunk {
+typedef struct _Chunk
+{
     int         count;
     int         capacity;
     uint8_t*    code;

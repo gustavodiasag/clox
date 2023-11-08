@@ -7,7 +7,8 @@
 #include "value.h"
 
 /** Heap-allocated objects supported by the language. */
-typedef enum {
+typedef enum
+{
     OBJ_BOUND_METHOD,
     OBJ_CLASS,
     OBJ_CLOSURE,
@@ -18,7 +19,8 @@ typedef enum {
     OBJ_UPVALUE
 } ObjType;
 
-struct Obj {
+struct Obj
+{
     // Identifies what kind of object it is.
     ObjType     type;
     // Flag determining whether the object is reachable in memory or not.
@@ -28,7 +30,8 @@ struct Obj {
 
 // Since functions are first class in Lox, they should be
 // represented as objects.
-typedef struct _ObjFun {
+typedef struct _ObjFun
+{
     Obj     obj;
     // Stores the number of parameters the function expects.
     int     arity;
@@ -45,13 +48,15 @@ typedef Value (*NativeFun)(int argc, Value* argv);
 // Given that native functions behave in a different way when
 // compared to the language's functions, they are defined as
 // an entirely different object type.
-typedef struct _ObjNative {
+typedef struct _ObjNative
+{
     Obj         obj;
     // Pointer to the C function that implements the native behavior.
     NativeFun   function;
 } ObjNative;
 
-struct ObjStr {
+struct ObjStr
+{
     Obj         obj;
     // Used to avoid traversing the string.
     int         length;
@@ -63,7 +68,8 @@ struct ObjStr {
 };
 
 // Runtime representation of upvalues.
-typedef struct _ObjUpvalue {
+typedef struct _ObjUpvalue
+{
     Obj                 obj;
     // Pointer to a closed-over variable.
     Value*              location;
@@ -81,7 +87,8 @@ typedef struct _ObjUpvalue {
 // at runtime. Functions can have references to variables declared
 // in their bodies and also capture outer-scoped variables, so
 // their behavior is similar to that of a closure.
-typedef struct _ObjClosure{
+typedef struct _ObjClosure
+{
     Obj             obj;
     ObjFun*         function;
     // Pointer to a dynamically allocated array of pointers to
@@ -92,7 +99,8 @@ typedef struct _ObjClosure{
 } ObjClosure;
 
 // Runtime representation of classes.
-typedef struct _ObjClass {
+typedef struct _ObjClass
+{
     Obj     obj;
     // Class' name.
     ObjStr* name;
@@ -102,7 +110,8 @@ typedef struct _ObjClass {
 } ObjClass;
 
 // Represents an instance of a class.
-typedef struct _ObjInst {
+typedef struct _ObjInst
+{
     Obj         obj;
     // Pointer to the class that the instance represents.
     ObjClass*   class;
@@ -111,43 +120,44 @@ typedef struct _ObjInst {
 } ObjInst;
 
 // Wraps some receiver and the method closure together.
-typedef struct _ObjBoundMethod {
+typedef struct _ObjBoundMethod
+{
     Obj             obj;
     Value           receiver;
     ObjClosure*     method;
 } ObjBoundMethod;
 
-#define OBJ_TYPE(val) (AS_OBJ(val)->type)
+#define OBJ_TYPE(val)           (AS_OBJ(val)->type)
 
-#define IS_BOUND_METHOD(val) is_obj_type(val, OBJ_BOUND_METHOD)
+#define IS_BOUND_METHOD(val)    is_obj_type(val, OBJ_BOUND_METHOD)
 
-#define IS_CLASS(val) is_obj_type(val, OBJ_CLASS)
+#define IS_CLASS(val)           is_obj_type(val, OBJ_CLASS)
 
-#define IS_CLOSURE(val) is_obj_type(val, OBJ_CLOSURE)
+#define IS_CLOSURE(val)         is_obj_type(val, OBJ_CLOSURE)
 
-#define IS_FUNC(val) is_obj_type(val, OBJ_FUNC)
+#define IS_FUNC(val)            is_obj_type(val, OBJ_FUNC)
 
-#define IS_INSTANCE(val) is_obj_type(val, OBJ_INSTANCE)
+#define IS_INSTANCE(val)        is_obj_type(val, OBJ_INSTANCE)
 
-#define IS_NATIVE(val) is_obj_type(val, OBJ_NATIVE)
+#define IS_NATIVE(val)          is_obj_type(val, OBJ_NATIVE)
 
-#define IS_STR(val) is_obj_type(val, OBJ_STR)
+#define IS_STR(val)             is_obj_type(val, OBJ_STR)
 
-#define AS_BOUND_METHOD(val) ((ObjBoundMethod*)AS_OBJ(val))
+#define AS_BOUND_METHOD(val)    ((ObjBoundMethod*)AS_OBJ(val))
 
-#define AS_CLASS(val) ((ObjClass*)AS_OBJ(val))
+#define AS_CLASS(val)           ((ObjClass*)AS_OBJ(val))
 
-#define AS_CLOSURE(val) ((ObjClosure*)AS_OBJ(val))
+#define AS_CLOSURE(val)         ((ObjClosure*)AS_OBJ(val))
 
-#define AS_FUNC(val) ((ObjFun*)AS_OBJ(val))
+#define AS_FUNC(val)            ((ObjFun*)AS_OBJ(val))
 
-#define AS_INSTANCE(val) ((ObjInst*)AS_OBJ(val))
+#define AS_INSTANCE(val)        ((ObjInst*)AS_OBJ(val))
 
-#define AS_NATIVE(val) (((ObjNative*)AS_OBJ(val))->function)
+#define AS_NATIVE(val)          (((ObjNative*)AS_OBJ(val))->function)
 
-#define AS_STR(val) ((ObjStr*)AS_OBJ(val))
+#define AS_STR(val)             ((ObjStr*)AS_OBJ(val))
 
-#define AS_CSTR(val) (((ObjStr*)AS_OBJ(val))->chars)
+#define AS_CSTR(val)            (((ObjStr*)AS_OBJ(val))->chars)
 
 /**
  * ALlocates and initializes a bound from a method specified by a closure

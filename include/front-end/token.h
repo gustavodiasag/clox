@@ -1,7 +1,8 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-typedef enum {
+typedef enum
+{
     // Single character tokens.
     TOKEN_LEFT_PAREN,
     TOKEN_RIGHT_PAREN,
@@ -52,11 +53,12 @@ typedef enum {
 
 // A lexeme is represented by a pointer to its first character in
 // the source string and the number of characters it contains.
-typedef struct {
-    TokenType type;
+typedef struct
+{
+    TokenType   type;
     const char* start;
-    int length;
-    int line;
+    int         length;
+    int         line;
 } Token;
 
 #endif

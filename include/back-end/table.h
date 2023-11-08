@@ -6,18 +6,20 @@
 
 #define MAX_LOAD_FACTOR 0.75
 
-typedef struct {
+typedef struct
+{
     ObjStr* key;
-    Value value;
+    Value   value;
 } Entry;
 
 // Hash table that considers variable names as keys
 // and their correspondent value as mappings.
-typedef struct {
+typedef struct
+{
     // Number of key/value pairs stored.
-    int count;
-    int size;
-    Entry* entries;
+    int     count;
+    int     size;
+    Entry*  entries;
 } Table;
 
 /// @brief Initializes the specified table, nothing is allocated until needed.
