@@ -70,7 +70,7 @@ static void blacken_object(Obj* obj)
     // set and that is no longer in the gray stack.
     switch (obj->type) {
     case OBJ_BOUND_METHOD: {
-        ObjBoundMethod* bound = (ObjBoundMethod*) obj;
+        ObjBoundMethod* bound = (ObjBoundMethod*)obj;
         mark_value(bound->receiver);
         mark_object((Obj*)bound->method);
         break;
@@ -78,7 +78,7 @@ static void blacken_object(Obj* obj)
     case OBJ_CLASS: {
         ObjClass* class = (ObjClass*)obj;
         mark_object((Obj*)class->name);
-        mark_table((&class->methods));
+        mark_table(&class->methods);
         break;
     }
     // Each closure has a reference to the bare function it wraps,
@@ -87,9 +87,9 @@ static void blacken_object(Obj* obj)
         ObjClosure* closure = (ObjClosure*)obj;
         mark_object((Obj*)closure->function);
 
-        for (int i = 0; i < closure->upvalue_count; i++)
+        for (int i = 0; i < closure->upvalue_count; i++) {
             mark_object((Obj*)closure->upvalues[i]);
-
+        }
         break;
     }
     case OBJ_FUNC: {
@@ -126,8 +126,9 @@ void table_remove_white(Table* table)
     for (int i = 0; i < table->size; i++) {
         Entry* entry = &table->entries[i];
 
-        if (entry->key && !entry->key->obj.is_marked)
+        if (entry->key && !entry->key->obj.is_marked) {
             table_delete(table, entry->key);
+        }
     }
 }
 

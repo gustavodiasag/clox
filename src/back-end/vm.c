@@ -126,9 +126,9 @@ static bool call_value(Value callee, int args)
 
             return init_frame(bound->method, args);
         }
-        // If the value being called is a class, then it
-        // is treated as a constructor call.
         case OBJ_CLASS: {
+            // If the value being called is a class, then it
+            // is treated as a constructor call.
             ObjClass* class = AS_CLASS(callee);
             vm.stack_top[-args - 1] = OBJ_VAL(new_instance(class));
             
@@ -137,7 +137,7 @@ static bool call_value(Value callee, int args)
             // the runtime returns the uninitialized instance, but if any
             // arguments were passed when an instance is initialized when
             // there's no `init` method, its a runtime error.   
-            if (table_get(&class->methods,  vm.init_string, &initializer)) {
+            if (table_get(&class->methods, vm.init_string, &initializer)) {
                 return init_frame(AS_CLOSURE(initializer), args);
             } else if (args != 0) {
                 runtime_err("Expected 0 arguments but got %d.", args);
@@ -238,9 +238,9 @@ static ObjUpvalue* capture_upvalue(Value* local)
         curr_upvalue = curr_upvalue->next;
     }
 
-    if (curr_upvalue && curr_upvalue->location == local)
+    if (curr_upvalue && curr_upvalue->location == local) {
         return curr_upvalue;
-
+    }
     ObjUpvalue* upvalue = new_upvalue(local);
     upvalue->next = curr_upvalue;
 
@@ -403,7 +403,6 @@ static InterpretResult run()
 
             if (!table_get(&vm.globals, name, &value)) {
                 runtime_err("Undefined variable '%s'.", name->chars);
-
                 return INTERPRET_RUNTIME_ERROR;
             }
             push(value);
@@ -540,7 +539,7 @@ static InterpretResult run()
         }
         case OP_CALL: {
             int args = READ_BYTE();
-
+            
             if (!call_value(peek(args), args)) {
                 return INTERPRET_RUNTIME_ERROR;
             }
@@ -560,8 +559,8 @@ static InterpretResult run()
         case OP_CLOSURE: {
             ObjFun* function = AS_FUNC(READ_CONSTANT());
             ObjClosure* closure = new_closure(function);
-
             push(OBJ_VAL(closure));
+            
             for (int i = 0; i < closure->upvalue_count; i++) {
                 uint8_t is_local = READ_BYTE();
                 uint8_t index = READ_BYTE();
@@ -620,10 +619,9 @@ static InterpretResult run()
             frame = &vm.frames[vm.frame_count - 1];
             break;
         }
-        case OP_METHOD: {
+        case OP_METHOD:
             define_method(READ_STR());
             break;
-        }
         }
     }
 #undef READ_BYTE

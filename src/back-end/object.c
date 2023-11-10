@@ -31,7 +31,6 @@ static Obj* allocate_obj(size_t size, ObjType type)
 #ifdef DEBUG_LOG_GC
     printf("%p allocate %zu for %d\n", (void*)obj, size, type);
 #endif
-
     return obj;
 }
 
@@ -63,17 +62,17 @@ ObjUpvalue* new_upvalue(Value* slot)
     return upvalue;
 }
 
-ObjClosure* new_closure(ObjFun* function)
+ObjClosure* new_closure(ObjFun* fun)
 {
-    ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue*, function->upvalue_count);
+    ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue*, fun->upvalue_count);
 
-    for (int i = 0; i < function->upvalue_count; i++)
+    for (int i = 0; i < fun->upvalue_count; i++)
         upvalues[i] = NULL;
 
     ObjClosure* closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
-    closure->function = function;
+    closure->function = fun;
     closure->upvalues = upvalues;
-    closure->upvalue_count = function->upvalue_count;
+    closure->upvalue_count = fun->upvalue_count;
 
     return closure;
 }
@@ -100,10 +99,10 @@ ObjInst* new_instance(ObjClass* class)
     return instance;
 }
 
-ObjNative* new_native(NativeFun function)
+ObjNative* new_native(NativeFun fun)
 {
     ObjNative* native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
-    native->function = function;
+    native->function = fun;
 
     return native;
 }
@@ -146,19 +145,19 @@ static uint32_t hash_str(const char* key, int len)
     return hash;
 }
 
-ObjStr* take_str(char* chars, int len)
+ObjStr* take_str(char* data, int len)
 {
-    uint32_t hash = hash_str(chars, len);
-    ObjStr* interned = table_find(&vm.strings, chars, len, hash);
+    uint32_t hash = hash_str(data, len);
+    ObjStr* interned = table_find(&vm.strings, data, len, hash);
 
     if (interned) {
         // Duplicate string is no longer needed.
-        FREE_ARRAY(char, chars, len + 1);
+        FREE_ARRAY(char, data, len + 1);
 
         return interned;
     }
 
-    return allocate_str(chars, len, hash);
+    return allocate_str(data, len, hash);
 }
 
 ObjStr* copy_str(const char* chars, int len)

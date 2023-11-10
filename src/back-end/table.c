@@ -50,14 +50,14 @@ static Entry* find_entry(Entry* entries, int size, ObjStr* key)
 
 bool table_get(Table* table, ObjStr* key, Value* value)
 {
-    if (!table->count)
+    if (!table->count) {
         return false;
-
+    }
     Entry* entry = find_entry(table->entries, table->size, key);
 
-    if (!entry)
+    if (!entry) {
         return false;
-
+    }
     *value = entry->value;
     return true;
 }
@@ -76,16 +76,15 @@ static void adjust_size(Table* table, int size)
     // Since tombstones are not transferred from the old table
     // to the new one, the number of entries is reinitialized.
     table->count = 0;
-
     // Once resized, the previous entries must be mapped again
     // considering that the table's size has been updated.
     for (int i = 0; i < table->size; i++) {
         Entry* entry = &table->entries[i];
 
-        if (!entry->key)
+        if (!entry->key) {
             // Ignores both empty entries and tombstones.
             continue;
-
+        }
         Entry* dest = find_entry(entries, size, entry->key);
         dest->key = entry->key;
         dest->value = entry->value;
@@ -101,16 +100,14 @@ bool table_set(Table* table, ObjStr* key, Value value)
 {
     if (table->count + 1 > table->size * MAX_LOAD_FACTOR) {
         int size = GROW_CAPACITY(table->size);
-
         adjust_size(table, size);
     }
-
     Entry* entry = find_entry(table->entries, table->size, key);
     bool new_key = !entry->key;
 
-    if (new_key && IS_NIL(entry->value))
+    if (new_key && IS_NIL(entry->value)) {
         table->count++;
-
+    }
     entry->key = key;
     entry->value = value;
 
@@ -119,14 +116,14 @@ bool table_set(Table* table, ObjStr* key, Value value)
 
 bool table_delete(Table* table, ObjStr* key)
 {
-    if (table->count == 0)
+    if (!table->count) {
         return false;
-
+    }
     Entry* entry = find_entry(table->entries, table->size, key);
 
-    if (!entry->key)
+    if (!entry->key) {
         return false;
-
+    }
     // A tombstone is placed in the entry so that the probe sequence
     // used when searching a key is not broken.
     entry->key = NULL;
@@ -148,9 +145,9 @@ void table_add_all(Table* src, Table* dest)
 
 ObjStr* table_find(Table* table, const char* chars, int len, uint32_t hash)
 {
-    if (table->count == 0)
+    if (!table->count) {
         return NULL;
-
+    }
     uint32_t index = hash % table->size;
 
     while (true) {
@@ -158,10 +155,12 @@ ObjStr* table_find(Table* table, const char* chars, int len, uint32_t hash)
 
         if (!entry->key) {
             // Stop if an empty non-tombstone entry is found.
-            if (IS_NIL(entry->value))
+            if (IS_NIL(entry->value)) {
                 return NULL;
-
-        } else if (entry->key->length == len && entry->key->hash == hash && memcmp(entry->key->chars, chars, len) == 0) {
+            }
+        } else if (entry->key->length == len
+                   && entry->key->hash == hash
+                   && !memcmp(entry->key->chars, chars, len)) {
 
             return entry->key;
         }
