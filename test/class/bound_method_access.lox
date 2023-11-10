@@ -1,0 +1,11 @@
+class Person {
+    sayName() {
+        print this.name;
+    }
+}
+
+var knuth = Person();
+knuth.name = "Knuth";
+
+var method = knuth.sayName;
+method(); // Prints "Knuth".
