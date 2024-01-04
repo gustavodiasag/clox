@@ -26,7 +26,7 @@ void free_table(Table* table)
 /// @return table entry corresponding to the object key
 static Entry* find_entry(Entry* entries, int size, ObjStr* key)
 {
-    uint32_t index = key->hash % size;
+    uint32_t index = key->hash & (size - 1);
     Entry* tombstone = NULL;
 
     while (true) {
@@ -44,7 +44,7 @@ static Entry* find_entry(Entry* entries, int size, ObjStr* key)
             return entry;
         }
         // Collision handling.
-        index = (index + 1) % size;
+        index = (index + 1) & (size - 1);
     }
 }
 
@@ -148,7 +148,7 @@ ObjStr* table_find(Table* table, const char* chars, int len, uint32_t hash)
     if (!table->count) {
         return NULL;
     }
-    uint32_t index = hash % table->size;
+    uint32_t index = hash & (table->size - 1);
 
     while (true) {
         Entry* entry = &table->entries[index];
@@ -165,6 +165,6 @@ ObjStr* table_find(Table* table, const char* chars, int len, uint32_t hash)
             return entry->key;
         }
 
-        index = (index + 1) % table->size;
+        index = (index + 1) & (table->size - 1);
     }
 }
