@@ -55,7 +55,7 @@ bool table_get(Table* table, ObjStr* key, Value* value)
     }
     Entry* entry = find_entry(table->entries, table->size, key);
 
-    if (!entry) {
+    if (!entry->key) {
         return false;
     }
     *value = entry->value;
