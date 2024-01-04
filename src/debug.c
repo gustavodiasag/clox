@@ -156,7 +156,7 @@ int disassemble_instruction(Chunk* chunk, int offset)
     case OP_INVOKE:
         return invoke_instruction("OP_INVOKE", chunk, offset);
     case OP_SUPER_INVOKE:
-        return invoke_instruction("OP_SUPER_INVOKE", chunk, offet);
+        return invoke_instruction("OP_SUPER_INVOKE", chunk, offset);
     case OP_CLOSURE: {
         offset++;
         uint8_t constant = chunk->code[offset++];
