@@ -13,51 +13,72 @@
 #include "debug.h"
 #endif
 
-typedef struct Compiler {
-    // Linked-list used to provide access to the surrounding
-    // compiler and its bytecode chunk.
-    struct Compiler* enclosing;
-    ObjFun* func;
-    FunType type;
+typedef struct _Compiler
+{
+    // Provides access to the surrounding compiler and its bytecode chunk.
+    struct _Compiler*   enclosing;
+    ObjFun*             func;
+    FunType             type;
     // Locals that are in scope at each point in the
     // compilation process.
-    Local locals[UINT8_COUNT];
+    Local               locals[UINT8_COUNT];
     // Tracks how many locals are in scope.
-    int local_count;
+    int                 local_count;
     // Upvalues looked-up by the function being parsed.
-    UpValue upvalues[UINT8_COUNT];
+    UpValue             upvalues[UINT8_COUNT];
     // Number of blocks surrounding the code being compiled.
-    int scope_depth;
+    int                 scope_depth;
 } Compiler;
 
-// Forms a linked list from the current innermost class being
-// compiled out through all of the enclosing classes.
-typedef struct ClassCompiler {
-    // Points to a struct representing the current, innermost
-    // class being compiled.
-    struct ClassCompiler* enclosing;
-    // Used to check whether the surrounding class is a subclass
-    // or not.
-    bool has_superclass;
+// Linked list from the class being compiled to the enclosing classes.
+typedef struct _ClassCompiler
+{
+    struct _ClassCompiler*  enclosing;
+    // Whether the surrounding class is a subclass or not.
+    bool                    has_superclass;
 } ClassCompiler;
 
+typedef struct
+{
+    ParseFun prefix;
+    ParseFun infix;
+    Precedence precedence;
+} ParseRule;
+
 static void expression();
+
 static void statement();
+
 static void declaration();
+
 static void grouping(bool can_assign);
+
 static void binary(bool can_assign);
+
 static void unary(bool can_assign);
+
 static void number(bool can_assign);
+
 static void literal(bool can_assign);
+
 static void string(bool can_assign);
+
 static void variable(bool can_assign);
+
 static void and_(bool can_assign);
+
 static void or_(bool can_assign);
+
 static void call(bool can_assign);
+
 static void dot(bool can_assign);
+
 static void this(bool can_assign);
 
+static void super(bool can_assign);
+
 Parser parser;
+
 Compiler* current = NULL;
 // Points to the current class being compiled, if any.
 ClassCompiler* current_class = NULL;
@@ -101,7 +122,7 @@ static ParseRule rules[] = {
     [TOKEN_OR] = {NULL, or_, PREC_OR},
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
-    [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
+    [TOKEN_SUPER] = {super, NULL, PREC_NONE},
     [TOKEN_THIS] = {this, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
@@ -689,8 +710,6 @@ static void named_variable(Token name, bool can_assign)
     }
 }
 
-/// @brief Parses a variable.
-/// @param can_assign whether to consider assigment or not
 static void variable(bool can_assign)
 {
     named_variable(parser.previous, can_assign);
@@ -705,8 +724,23 @@ static Token synth_token(const char* data)
     return token;
 }
 
-/// @brief Parses a `this` expression.
-/// @param can_assign whether to consider assignment or not
+static void super(bool can_assign)
+{
+    if (!current_class) {
+        error("Can't use 'super' outside of a class.");
+    } else if (!current_class->has_superclass) {
+        error("Can't use 'super' in a class with no superclass.");
+    }
+    consume(TOKEN_DOT, "Expect '.' after 'super'.");
+    consume(TOKEN_IDENTIFIER, "Expect superclass method name.");
+    
+    uint8_t name = identifier_const(&parser.previous);
+
+    named_variable(synth_token("this"), false);
+    named_variable(synth_token("super"), false);
+    emit_bytes(OP_GET_SUPER, name);
+}
+
 static void this(bool can_assign)
 {
     if (!current_class) {
@@ -719,13 +753,11 @@ static void this(bool can_assign)
     variable(false);
 }
 
-/// @brief Parses an expression.
 static void expression()
 {
     parse_precedence(PREC_ASSIGN);
 }
 
-/// @brief Parses declarations and statements nested in a block.
 static void block()
 {
     while (parser.current.type != TOKEN_RIGHT_BRACE &&
@@ -736,8 +768,6 @@ static void block()
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
-/// @brief Parses a function with its corresponding parameters and statements.
-/// @param type whether the function is top-level or not
 static void function(FunType type)
 {
     // To handle the compilation of multiple nested functions, a separate compiler
@@ -786,7 +816,6 @@ static void function(FunType type)
     }
 }
 
-/// @brief Emits the required bytecode for instantiating a class's method.
 static void method()
 {
     consume(TOKEN_IDENTIFIER, "Expect method name.");
@@ -816,7 +845,6 @@ static void class_declaration()
 
     emit_bytes(OP_CLASS, name);
     define_var(name);
-
     // When the compiler begins compiling a class, it pushes a new
     // `ClassCompiler` onto that implicit linked list stack.  
     ClassCompiler class_compiler;
@@ -824,11 +852,11 @@ static void class_declaration()
     class_compiler.enclosing = current_class;
     current_class = &class_compiler;
 
-    // After a class name is compiled, if the next token is a `<`, a
+    // After the class name is consumed, if the next token is a `<`, a
     // superclass clause was found.
     if (match(TOKEN_LESS)) {
         consume(TOKEN_IDENTIFIER, "Expect superclass name.");
-        // Looks up the superclass by name and pushed it onto the stack.
+        // Looks up the superclass by name and pushes it onto the stack.
         variable(false);
 
         if (identifier_equal(&class_name, &parser.previous)) {
@@ -837,7 +865,7 @@ static void class_declaration()
         begin_scope();
         add_local(synth_token("super"));
         define_var(0);
-        // Loads the subclass doing the inheriting onto the stack.
+        // Loads the inheriting subclass onto the stack.
         named_variable(class_name, false);
         emit_byte(OP_INHERIT);
         
@@ -878,7 +906,6 @@ static void fun_declaration()
     define_var(global);
 }
 
-/// @brief Parses a variable declaration, together with its initializing expression.
 static void var_declaration()
 {
     uint8_t var = parse_var("Expect a variable name.");
@@ -892,7 +919,6 @@ static void var_declaration()
     define_var(var);
 }
 
-/// @brief Parses an expression in a context where a statement is expected.
 static void expr_stmt()
 {
     expression();
@@ -946,7 +972,6 @@ static void for_stmt()
     end_scope();
 }
 
-/// @brief Parses a conditional statement.
 static void if_stmt()
 {
     consume(TOKEN_LEFT_PAREN, "Expect '(' after statement.");
@@ -972,7 +997,6 @@ static void if_stmt()
     patch_jump(else_jump);
 }
 
-/// @brief Parses a print statement.
 static void print_stmt()
 {
     expression();
@@ -980,7 +1004,6 @@ static void print_stmt()
     emit_byte(OP_PRINT);
 }
 
-/// @brief Parses a return statement.
 static void return_stmt()
 {
     // Having a `return` statement outside of any function is considered
@@ -1003,7 +1026,6 @@ static void return_stmt()
     }
 }
 
-/// @brief Parses a while statement.
 static void while_stmt()
 {
     // At this point, the position to where the loop could go
@@ -1028,7 +1050,7 @@ static void while_stmt()
     emit_byte(OP_POP);
 }
 
-/// @brief Minimizes the number of cascated compile errors reported.
+// Minimizes the number of cascated compile errors reported.
 static void syncronize()
 {
     parser.panic = false;
@@ -1057,7 +1079,6 @@ static void syncronize()
     }
 }
 
-/// @brief Parses a single declaration.
 static void declaration()
 {
     if (match(TOKEN_CLASS)) {
@@ -1076,7 +1097,6 @@ static void declaration()
     }
 }
 
-/// @brief Parses a single statement.
 static void statement()
 {
     if (match(TOKEN_PRINT)) {
@@ -1113,15 +1133,12 @@ static void string(bool can_assign)
     emit_constant(OBJ_VAL(copy_str(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
-/// @brief Parses an expression between parenthesis, consuming the closing one.
 static void grouping(bool can_assign)
 {
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-/// @brief Parses an infix expression.
-/// @param can_assign whether to consider assigment or not
 static void binary(bool can_assign)
 {
     TokenType operator_type = parser.previous.type;
@@ -1167,16 +1184,12 @@ static void binary(bool can_assign)
     }
 }
 
-/// @brief Emits the operational code for a function call.
-/// @param can_assign whether to consider assigment or not
 static void call(bool can_assign)
 {
     uint8_t args = arg_list();
     emit_bytes(OP_CALL, args);
 }
 
-/// @brief Parses a class field access.
-/// @param can_assign whether to consider assigment or not
 static void dot(bool can_assign)
 {
     consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
@@ -1194,8 +1207,6 @@ static void dot(bool can_assign)
     }
 }
 
-/// @brief Parses a prefix expression.
-/// @param can_assign whether to consider assigment or not
 static void unary(bool can_assign)
 {
     TokenType operator_type = parser.previous.type;
@@ -1214,8 +1225,6 @@ static void unary(bool can_assign)
     }
 }
 
-/// @brief Parses a literal expression.
-/// @param can_assign whether to consider assigment or not
 static void literal(bool can_assign)
 {
     switch (parser.previous.type) {

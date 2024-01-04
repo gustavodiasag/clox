@@ -472,6 +472,15 @@ static InterpretResult run()
             push(value);
             break;
         }
+        case OP_GET_SUPER: {
+            ObjStr* name = READ_STR();
+            ObjClass* super = AS_CLASS(pop());
+
+            if (!bind_method(super, name)) {
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            break;
+        }
         case OP_EQUAL: {
             Value b = pop();
             Value a = pop();

@@ -62,13 +62,6 @@ typedef struct
     bool panic;
 } Parser;
 
-typedef struct
-{
-    ParseFun prefix;
-    ParseFun infix;
-    Precedence precedence;
-} ParseRule;
-
 // TODO: Description.
 ObjFun* compile(const char* source);
 
