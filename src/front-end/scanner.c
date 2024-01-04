@@ -3,7 +3,16 @@
 
 #include "common.h"
 #include "front-end/scanner.h"
-#include "front-end/token.h"
+
+typedef struct
+{
+    // Beginning of the current lexeme.
+    const char* start;
+    // Points to the current character being looked at.
+    const char* current;
+    // Used for error reporting.
+    int         line;
+} Scanner;
 
 Scanner scanner;
 
