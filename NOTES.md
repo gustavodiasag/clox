@@ -202,3 +202,13 @@ The challenge of that approach is determining which instruction sequences are co
 A Monte Carlo algorithm is a randomized algorithm whose output may be incorrect with a certain probability.
 
 While the answer returned by a deterministic algorithm is always expected to be correct, this is not the case for these algorithms. For decision problems, they are generally classified as either false-biased or true-biased. A **false-biased** Monte Carlo algorithm is **always correct when it returns false** and a **true-biased**, **always correct when it returns true**.
+
+# Floating-point representation
+
+In the perspective of mostly all machines nowadays, a 64-bit, double-precision, IEEE floating-point number has the following structure:
+
+- Starting from the right, the first 52 bits are the **fraction**, **mantissa**, or **significand** bits. They represent the significant digits of the number, as a binary integer.
+
+- Next to that are 11 **exponend** bits. These tell how far the mantissa is shifted away from the decimal point.
+
+- The highest bit is the **sign bit**, which indicates whether the number is positive or negative.
