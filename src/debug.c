@@ -4,27 +4,25 @@
 #include "back-end/value.h"
 #include "debug.h"
 
-/// @brief Prints the compound structure stored at the given offset.
-/// @param name instruction description
-/// @param chunk contains the instructions to be checked
-/// @param offset used to access the specified instruction
-/// @return the offset of the next instruction
+static int byte_instruction(const char* name, Chunk* chunk, int offset)
+{
+    uint8_t slot = chunk->code[offset + 1];
+    
+    printf("%-16s %4d\n", name, slot);
+    return offset + 2;
+}
+
 static int constant_instruction(const char* name, Chunk* chunk, int offset)
 {
+    /* Takes two bytes, one for the opcode and one for the operand. */
     uint8_t constant = chunk->code[offset + 1];
 
     printf("%-16s %4d '", name, constant);
     print_value(chunk->constants.values[constant]);
     printf("'\n");
-    // Takes two bytes, one for the opcode and one for the operand.
     return offset + 2;
 }
 
-/// @brief Prints the property name and argument count of the invocation.
-/// @param name property name
-/// @param chunk contains the instructions to be checked. 
-/// @param offset used to access the specified instruction
-/// @return  the offset of the next instruction
 static int invoke_instruction(const char* name, Chunk* chunk, int offset)
 {
     uint8_t cons = chunk->code[offset + 1];
@@ -36,34 +34,6 @@ static int invoke_instruction(const char* name, Chunk* chunk, int offset)
     return offset + 3;
 }
 
-/// @brief Prints the simple structure stored at the given offset.
-/// @param name instruction description
-/// @param offset used to access the specified instruction
-/// @return the offset of the next instruction
-static int simple_instruction(const char* name, int offset)
-{
-    printf("%s\n", name);
-    return offset + 1;
-}
-
-/// @brief Prints the stack slot corresponding to that instruction operand.
-/// @param name instruction description
-/// @param chunk contains the instructions to be checked
-/// @param offset used to access the specified instruction
-/// @return the offset of the next instruction
-static int byte_instruction(const char* name, Chunk* chunk, int offset)
-{
-    uint8_t slot = chunk->code[offset + 1];
-    
-    printf("%-16s %4d\n", name, slot);
-    return offset + 2;
-}
-
-/// @brief Disassembles an instruction with a 16-bit operand.
-/// @param name instruction description
-/// @param sign
-/// @param chunk contains the instruction to be checked
-/// @return the offset od the next instruction
 static int jump_instruction(const char* name, int sign, Chunk* chunk, int offset)
 {
     uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
@@ -71,6 +41,12 @@ static int jump_instruction(const char* name, int sign, Chunk* chunk, int offset
 
     printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
     return offset + 3;
+}
+
+static int simple_instruction(const char* name, int offset)
+{
+    printf("%s\n", name);
+    return offset + 1;
 }
 
 void disassemble_chunk(Chunk* chunk, const char* name)
@@ -91,7 +67,6 @@ int disassemble_instruction(Chunk* chunk, int offset)
     } else {
         printf("%4d ", chunk->lines[offset]);
     }
-
     uint8_t instruction = chunk->code[offset];
 
     switch (instruction) {
@@ -174,7 +149,6 @@ int disassemble_instruction(Chunk* chunk, int offset)
             printf("%04d      |                     %s %d\n",
                 offset - 2, is_local ? "local" : "upvalue", index);
         }
-
         return offset;
     }
     case OP_CLOSE_UPVALUE:

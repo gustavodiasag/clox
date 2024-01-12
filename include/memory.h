@@ -10,32 +10,32 @@
 #define GROW_CAPACITY(capacity) \
     ((capacity) < 8 ? 8 : capacity * 2)
 
-// Gets the size of the array's element type and casts the
-// resulting void pointer back to the right type.
 #define GROW_ARRAY(type, ptr, old_count, new_count)  \
-    (type*)reallocate(ptr, sizeof(type) * old_count, \
-        sizeof(type) * new_count)
+    (type*)reallocate(ptr, sizeof(type) * old_count, sizeof(type) * new_count)
 
-// Wrapper around `reallocate` that resizes an allocation
-// down to zero bytes.
 #define FREE(type, ptr) \
     reallocate(ptr, sizeof(type), 0)
 
 #define FREE_ARRAY(type, ptr, old_count) \
     reallocate(ptr, sizeof(type) * old_count, 0)
 
-/// @brief Allocates, frees, shrinks and expands the size of a dynamic allocation.
-/// @param ptr pointer to the block of memory allocated
-/// @param old_size previous size of allocation
-/// @param new_size size to be allocated
-/// @return pointer to the newly allocated memory
-void* reallocate(void* pointer, size_t old_size, size_t new_size);
 
-/// @brief Deallocates the specified object considering its type.
-/// @param obj object to be freed from memory
+/** Deallocates an object specified by `obj` based on its tag. */
 void free_obj(Obj* obj);
 
-/// @brief Frees the object linked list from the virtual machine.
+/** Frees the virtual machine's object references. */
 void free_objs();
+
+/**
+ * Manages the amount of memory pointed by `ptr` based on the sizes specified
+ * by `old_size` and `new_size`.
+ * 
+ * When `old_size` is 0 and `new_size` is a positive value, `reallocate`
+ * functions as a call to `malloc`. When `old_size` is positive and `new_size`
+ * is 0, `reallocate` functions as a call to `free`.
+ * 
+ * Returns a pointer to the newly allocated memory.
+ */
+void* reallocate(void* ptr, size_t old_size, size_t new_size);
 
 #endif

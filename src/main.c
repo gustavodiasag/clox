@@ -7,10 +7,10 @@
 #include "common.h"
 #include "debug.h"
 
-void repl()
+static void repl()
 {
     char line[1024];
-
+    
     while (true) {
         printf("> ");
 
@@ -18,12 +18,11 @@ void repl()
             printf("\n");
             break;
         }
-
         interpret(line);
     }
 }
 
-char* read_file(const char* path)
+static char* read_file(const char* path)
 {
     FILE* file = fopen(path, "rb");
 
@@ -56,33 +55,32 @@ char* read_file(const char* path)
     return buffer;
 }
 
-void run_file(const char* path)
+static void run_file(const char* path)
 {
     char* source = read_file(path);
     InterpretResult result = interpret(source);
     free(source);
 
-    // TODO: Handle errors using the GNU Library Reference Manual conventions.
-    if (result == INTERPRET_COMPILE_ERROR)
+    if (result == INTERPRET_COMPILE_ERROR) {
         exit(65);
-
-    if (result == INTERPRET_RUNTIME_ERROR)
+    } else if (result == INTERPRET_RUNTIME_ERROR) {
         exit(70);
+    }
 }
 
 int main(int argc, const char* argv[])
 {
     init_vm();
 
-    if (argc == 1)
+    if (argc == 1) {
         repl();
-    else if (argc == 2)
+    } else if (argc == 2) {
         run_file(argv[1]);
-    else {
+    } else {
         fprintf(stderr, "Usage: clox [path]\n");
         exit(64);
     }
-
     free_vm();
+
     return 0;
 }

@@ -3,10 +3,13 @@
 
 #include "token.h"
 
-// TODO: Description.
+/**
+ * Initializes a scanner pointing at the beginning of a character stream
+ * specified by `source`.
+ */
 void init_scanner(const char* source);
 
-// TODO: Description.
+/** Returns the next token that the scanner has found. */
 Token scan_token();
 
 #endif

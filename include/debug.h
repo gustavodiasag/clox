@@ -3,15 +3,18 @@
 
 #include "back-end/chunk.h"
 
-/// @brief Prints all the instructions in a chunk.
-/// @param chunk stores the bytecode to be analysed
-/// @param name function's name
+/**
+ * Prints all the opcodes from a chunk specified by `chunk`, which is contained
+ * by a function whose name is specified by `name`.
+ */
 void disassemble_chunk(Chunk* chunk, const char* name);
 
-/// @brief Disassembles the instruction at the given offset.
-/// @param chunk contains the instruction to be checked
-/// @param offset used to access a specific instruction
-/// @return the offset of the next instruction
+/**
+ * Prints a single opcode and its respective operands from a chunk specified by
+ * `chunk`, present at an offset specified by `offset`.
+ * 
+ * Returns the offset of the next instruction.
+ */
 int disassemble_instruction(Chunk* chunk, int offset);
 
 #endif

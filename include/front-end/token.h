@@ -1,9 +1,10 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
+/** All of the tokens that could possibly be generated during lexing. */
 typedef enum
 {
-    // Single character tokens.
+    /* Single character. */
     TOKEN_LEFT_PAREN,
     TOKEN_RIGHT_PAREN,
     TOKEN_LEFT_BRACE,
@@ -15,20 +16,20 @@ typedef enum
     TOKEN_STAR,
     TOKEN_SLASH,
     TOKEN_SEMICOLON,
-    // One or two character tokens.
     TOKEN_BANG,
-    TOKEN_BANG_EQUAL,
     TOKEN_EQUAL,
-    TOKEN_EQUAL_EQUAL,
     TOKEN_GREATER,
-    TOKEN_GREATER_EQUAL,
     TOKEN_LESS,
+    /* Two character. */
+    TOKEN_BANG_EQUAL,
+    TOKEN_EQUAL_EQUAL,
+    TOKEN_GREATER_EQUAL,
     TOKEN_LESS_EQUAL,
-    // Literals.
+    /* Literals. */
     TOKEN_IDENTIFIER,
     TOKEN_STRING,
     TOKEN_NUMBER,
-    // Keywords.
+    /* Keywords. */
     TOKEN_AND,
     TOKEN_CLASS,
     TOKEN_ELSE,
@@ -45,14 +46,23 @@ typedef enum
     TOKEN_TRUE,
     TOKEN_VAR,
     TOKEN_WHILE,
-    // Error handler.
+    /* Error. */
     TOKEN_ERROR,
-    // End-of-file flag.
+    /* Eof. */
     TOKEN_EOF
 } TokenType;
 
 // A lexeme is represented by a pointer to its first character in
 // the source string and the number of characters it contains.
+
+/**
+ * Structure representing a token for the language.
+ * 
+ * `type` specifies the type of the token.
+ * `starts` points to the lexeme's first character in the source stream.
+ * `length` is the size of the lexeme.
+ * `line` is where the token was found in the source.
+ */
 typedef struct
 {
     TokenType   type;

@@ -4,28 +4,18 @@
 #include "common.h"
 #include "front-end/scanner.h"
 
-typedef struct
+typedef struct _Scanner
 {
-    // Beginning of the current lexeme.
     const char* start;
-    // Points to the current character being looked at.
     const char* current;
-    // Used for error reporting.
     int         line;
 } Scanner;
 
-Scanner scanner;
-
-void init_scanner(const char* source)
-{
-    scanner.start = source;
-    scanner.current = source;
-    scanner.line = 1;
-}
+static Scanner scanner;
 
 static bool is_alpha(char c)
 {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+    return (c >= 'a' && c <= 'z') ||(c >= 'A' && c <= 'Z') || (c == '_');
 }
 
 static bool is_digit(char c)
@@ -41,7 +31,6 @@ static bool is_at_end()
 static char advance()
 {
     scanner.current++;
-
     return scanner.current[-1];
 }
 
@@ -88,7 +77,7 @@ static Token error_token(const char* message)
     Token token;
 
     token.type = TOKEN_ERROR;
-    // Points to the error message instead of the source code.
+    /* Points to the error message instead of the source code. */
     token.start = message;
     token.length = (int)strlen(message);
     token.line = scanner.line;
@@ -112,11 +101,13 @@ static void skip_whitespace()
             advance();
             break;
         case '/': {
-            if (peek_next() == '/')
-                while (peek() != '\n' && !is_at_end())
+            if (peek_next() == '/') {
+                while (peek() != '\n' && !is_at_end()) {
                     advance();
-            else
+                }
+            } else {
                 return;
+            }
             break;
         }
         default:
@@ -125,12 +116,14 @@ static void skip_whitespace()
     }
 }
 
-static TokenType check_keyword(int start, int len, const char* rest, TokenType type)
+static TokenType check_keyword(int start, int len, const char* rest,
+                               TokenType type)
 {
-    if (scanner.current - scanner.start == start + len && memcmp(scanner.start + start, rest, len) == 0) {
+    if (scanner.current - scanner.start == start + len &&
+        memcmp(scanner.start + start, rest, len) == 0)
+    {
         return type;
     }
-
     return TOKEN_IDENTIFIER;
 }
 
@@ -182,30 +175,28 @@ static TokenType identifier_type()
     case 'w':
         return check_keyword(1, 4, "hile", TOKEN_WHILE);
     }
-
     return TOKEN_IDENTIFIER;
 }
 
 static Token identifier()
 {
-    while (is_alpha(peek()) || is_digit(peek()))
+    while (is_alpha(peek()) || is_digit(peek())) {
         advance();
-
+    }
     return make_token(identifier_type());
 }
 
 static Token number()
 {
-    while (is_digit(peek()))
+    while (is_digit(peek())) {
         advance();
-
-    if (peek() == '.' && is_digit(peek_next())) {
-        advance(); // Consume the '.'.
-
-        while (is_digit(peek()))
-            advance();
     }
-
+    if (peek() == '.' && is_digit(peek_next())) {
+        advance(); /* Consume the '.'. */
+        while (is_digit(peek())) {
+            advance();
+        }
+    }
     return make_token(TOKEN_NUMBER);
 }
 
@@ -216,13 +207,19 @@ static Token string()
             scanner.line++;
         advance();
     }
-
-    if (is_at_end())
+    if (is_at_end()) {
         return error_token("Unterminated string");
-
-    advance(); // Closing quote.
+    }
+    advance(); /* Closing quote. */
 
     return make_token(TOKEN_STRING);
+}
+
+void init_scanner(const char* source)
+{
+    scanner.start = source;
+    scanner.current = source;
+    scanner.line = 1;
 }
 
 Token scan_token()
@@ -231,17 +228,17 @@ Token scan_token()
 
     scanner.start = scanner.current;
 
-    if (is_at_end())
+    if (is_at_end()) {
         return make_token(TOKEN_EOF);
-
+    }
     char c = advance();
 
-    if (is_alpha(c))
+    if (is_alpha(c)) {
         return identifier();
-
-    if (is_digit(c))
+    }
+    if (is_digit(c)) {
         return number();
-
+    }
     switch (c) {
     case '(':
         return make_token(TOKEN_LEFT_PAREN);
@@ -276,6 +273,5 @@ Token scan_token()
     case '"':
         return string();
     }
-
     return error_token("Unexpected character.");
 }
