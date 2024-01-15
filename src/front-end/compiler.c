@@ -180,7 +180,7 @@ static void this(bool can_assign);
 static void super(bool can_assign);
 
 /* The parser is only needed during the compilation process. */
-Parser parser;
+static Parser parser;
 
 /* References the currently active compiler. */
 Compiler* current = NULL;
