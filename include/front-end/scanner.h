@@ -9,7 +9,12 @@
  */
 void init_scanner(const char* source);
 
-/** Returns the next token that the scanner has found. */
+/**
+ * Sequentially looks for a token from the stream.
+ * 
+ * Returns the token found or a special one that stores an error message as its
+ * lexeme.
+ */
 Token scan_token();
 
 #endif

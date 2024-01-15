@@ -1,7 +1,9 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-/** All of the tokens that could possibly be generated during lexing. */
+/**
+ * Represents all of the tokens that could possibly be generated during lexing.
+ */
 typedef enum
 {
     /* Single character. */
@@ -48,18 +50,15 @@ typedef enum
     TOKEN_WHILE,
     /* Error. */
     TOKEN_ERROR,
-    /* Eof. */
+    /* EOF. */
     TOKEN_EOF
 } TokenType;
-
-// A lexeme is represented by a pointer to its first character in
-// the source string and the number of characters it contains.
 
 /**
  * Structure representing a token for the language.
  * 
- * `type` specifies the type of the token.
- * `starts` points to the lexeme's first character in the source stream.
+ * `type` is the type of the token.
+ * `starts` is a pointer to the lexeme's first character in the source stream.
  * `length` is the size of the lexeme.
  * `line` is where the token was found in the source.
  */
