@@ -4,7 +4,14 @@
 #include "common.h"
 #include "front-end/scanner.h"
 
-typedef struct _Scanner
+/**
+ * Structure of the scanner for the language.
+ * 
+ * `start` is a pointer to the beginning of a lexeme.
+ * `current` is a pointer to the current character being looked at.
+ * `line` is the vertical index of the lexeme.
+ */
+typedef struct
 {
     const char* start;
     const char* current;
@@ -54,7 +61,7 @@ static bool match(char c)
 
     if (*scanner.current != c)
         return false;
-    // Advances if the desired character is found.
+    /* Advances if the desired character is found. */
     scanner.current++;
 
     return true;
