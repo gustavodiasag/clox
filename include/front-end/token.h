@@ -55,7 +55,7 @@ typedef enum
 } TokenType;
 
 /**
- * Structure representing a token for the language.
+ * Structure representing a token in the language.
  * 
  * `type` is the type of the token.
  * `starts` is a pointer to the lexeme's first character in the source stream.
