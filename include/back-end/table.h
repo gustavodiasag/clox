@@ -4,8 +4,6 @@
 #include "common.h"
 #include "value.h"
 
-#define MAX_LOAD_FACTOR 0.75
-
 /**
  * Represents a hash table slot.
  * 

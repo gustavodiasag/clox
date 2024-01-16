@@ -6,6 +6,8 @@
 #include "back-end/value.h"
 #include "memory.h"
 
+#define MAX_LOAD_FACTOR 0.75
+
 static Entry* find_entry(Entry* entries, int size, ObjStr* key)
 {
     uint32_t index = key->hash & (size - 1);
