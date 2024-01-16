@@ -3,19 +3,21 @@
 
 #include "vm.h"
 
-/** Marks a heap-stored value specified by `o`. */
-void mark_object(Obj* o);
+/** Marks a heap-stored value specified by `obj` for collection. */
+void mark_object(Obj* obj);
 
-/** Marks a stack-stored value specified by `v`. */
+/** Marks a stack-stored value specified by `value` for collection. */
 void mark_value(Value value);
 
-/** Frees the keys not marked as reachable from a table specified by `t`. */
-void table_remove_white(Table* t);
+/**
+ * Frees the keys not marked as reachable from a table specified by `table`.
+ */
+void table_remove_white(Table* table);
 
-/** Marks all the positions from a table specified by `t`. */
+/** Marks all the positions from a table specified by `table`. */
 void mark_table(Table* table);
 
-// FIXME: Description
+/** Triggers garbage collection for all ends of the interpreter. */
 void collect_garbage();
 
 #endif

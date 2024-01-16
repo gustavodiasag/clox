@@ -5,13 +5,127 @@
 #include "memory.h"
 
 #ifdef DEBUG_LOG_GC
-
-#include "debug.h"
 #include <stdio.h>
-
+#include "debug.h"
 #endif
 
 #define GC_HEAP_GROW_FACTOR 2
+
+static void mark_array(ValueArray* array)
+{
+    for (int i = 0; i < array->count; i++)
+        mark_value(array->values[i]);
+}
+
+static void blacken_object(Obj* obj)
+{
+#ifdef DEBUG_LOG_GC
+    printf("%p blacken ", (void*)obj);
+    print_value(OBJ_VAL(obj));
+    printf("\n");
+#endif
+    switch (obj->type) {
+    case OBJ_BOUND_METHOD: {
+        ObjBoundMethod* bound = (ObjBoundMethod*)obj;
+        mark_value(bound->receiver);
+        mark_object((Obj*)bound->method);
+        break;
+    }
+    case OBJ_CLASS: {
+        ObjClass* class = (ObjClass*)obj;
+        mark_object((Obj*)class->name);
+        mark_table(&class->methods);
+        break;
+    }
+    case OBJ_CLOSURE: {
+        ObjClosure* closure = (ObjClosure*)obj;
+        mark_object((Obj*)closure->function);
+
+        for (int i = 0; i < closure->upvalue_count; i++) {
+            mark_object((Obj*)closure->upvalues[i]);
+        }
+        break;
+    }
+    case OBJ_FUNC: {
+        ObjFun* func = (ObjFun*)obj;
+        mark_object((Obj*)func->name);
+        mark_array(&func->chunk.constants);
+        break;
+    }
+    case OBJ_INSTANCE: {
+        ObjInst* instance = (ObjInst*)obj;
+        mark_object((Obj*)instance->class);
+        mark_table(&instance->fields);
+        break;
+    }
+    /* Strings and native function objects contain no outgoing references. */
+    case OBJ_NATIVE:
+    case OBJ_STR:
+        break;
+    case OBJ_UPVALUE:
+        mark_value(((ObjUpvalue*)obj)->closed);
+        break;
+    }
+}
+
+static void mark_roots()
+{
+    for (Value* slot = vm.stack; slot < vm.stack_top; slot++) {
+        mark_value(*slot);
+    }
+    /*
+     * Call frames have a pointer to the closure being called. The vm uses it
+     * to access constants and upvalues, so closures must be marked.
+     */
+    for (int i = 0; i < vm.frame_count; i++) {
+        mark_object((Obj*)vm.frames[i].closure);
+    }
+    for (ObjUpvalue* upvalue = vm.open_upvalues; upvalue; upvalue = upvalue->next) {
+        mark_object((Obj*)upvalue);
+    }
+    mark_table(&vm.globals);
+    /*
+     * A compiler periodically gets heap memory for literals and its constant
+     * table. If garbage collection is triggered while compilation, any values
+     * accessible by the compiler need to be treated as roots.
+     */
+    mark_compiler_roots();
+    mark_object((Obj*)vm.init_string);
+}
+
+static void trace_references()
+{
+    while (vm.gray_count > 0) {
+        Obj* obj = vm.gray_stack[--vm.gray_count];
+        blacken_object(obj);
+    }
+}
+
+static void sweep()
+{
+    Obj* prev = NULL;
+    Obj* obj = vm.objects;
+    /* Traverses the linked list of heap-stored objects from the vm. */
+    while (obj) {
+        /* Marked objects are ignored.*/
+        if (obj->is_marked) {
+            /* Marked objects must be unmarked for the next collection. */
+            obj->is_marked = false;
+            prev = obj;
+            obj = obj->next;
+        } else {
+            Obj* white = obj;
+            obj = obj->next;
+
+            if (prev) {
+                prev->next = obj;
+            } else {
+                vm.objects = obj;
+            }
+            free_obj(white);
+        }
+    }
+}
 
 void mark_object(Obj* obj)
 {
@@ -42,82 +156,8 @@ void mark_object(Obj* obj)
 
 void mark_value(Value value)
 {
-    // Some values are stored directly inline in `value_t` and require
-    // no heap allocation.
-    if (IS_OBJ(value))
+    if (IS_OBJ(value)) {
         mark_object(AS_OBJ(value));
-}
-
-/// @brief Marks all the values stored in an array.
-/// @param array value array
-static void mark_array(ValueArray* array)
-{
-    for (int i = 0; i < array->count; i++)
-        mark_value(array->values[i]);
-}
-
-/// @brief Marks all the given object's heap references.
-/// @param obj root object
-static void blacken_object(Obj* obj)
-{
-#ifdef DEBUG_LOG_GC
-    printf("%p blacken ", (void*)obj);
-    print_value(OBJ_VAL(obj));
-    printf("\n");
-#endif
-    // Marking an object as "black" is not a direct state change.
-    // A black object is any object whose `is_marked` field is
-    // set and that is no longer in the gray stack.
-    switch (obj->type) {
-    case OBJ_BOUND_METHOD: {
-        ObjBoundMethod* bound = (ObjBoundMethod*)obj;
-        mark_value(bound->receiver);
-        mark_object((Obj*)bound->method);
-        break;
-    }
-    case OBJ_CLASS: {
-        ObjClass* class = (ObjClass*)obj;
-        mark_object((Obj*)class->name);
-        mark_table(&class->methods);
-        break;
-    }
-    // Each closure has a reference to the bare function it wraps,
-    // as well as an array of pointers to the upvalues it captures.
-    case OBJ_CLOSURE: {
-        ObjClosure* closure = (ObjClosure*)obj;
-        mark_object((Obj*)closure->function);
-
-        for (int i = 0; i < closure->upvalue_count; i++) {
-            mark_object((Obj*)closure->upvalues[i]);
-        }
-        break;
-    }
-    case OBJ_FUNC: {
-        ObjFun* func = (ObjFun*)obj;
-        // Deals with the string object containing the function's name.
-        mark_object((Obj*)func->name);
-        // Marks the function's constant table values.
-        mark_array(&func->chunk.constants);
-        break;
-    }
-    // If an instance is alive, both its class and its instance
-    // fields should be marked.
-    case OBJ_INSTANCE: {
-        ObjInst* instance = (ObjInst*)obj;
-        mark_object((Obj*)instance->class);
-        mark_table(&instance->fields);
-        break;
-    }
-    // Strings and native function objects contain no
-    // outgoing references.
-    case OBJ_NATIVE:
-    case OBJ_STR:
-        break;
-    case OBJ_UPVALUE:
-        // When an upvalue is closed, it contains a reference
-        // to the closed-over value.
-        mark_value(((ObjUpvalue*)obj)->closed);
-        break;
     }
 }
 
@@ -142,71 +182,11 @@ void mark_table(Table* table)
     }
 }
 
-/// @brief Marks all allocations directly reachable by the program.
-static void mark_roots()
-{
-    for (Value* slot = vm.stack; slot < vm.stack_top; slot++)
-        mark_value(*slot);
-    // Each call frame contains a pointer to the cosure being
-    // called. The vm uses those pointers to access constants
-    // and upvalues, so closures should also be marked.
-    for (int i = 0; i < vm.frame_count; i++)
-        mark_object((Obj*)vm.frames[i].closure);
-
-    for (ObjUpvalue* upvalue = vm.open_upvalues; upvalue; upvalue = upvalue->next)
-        mark_object((Obj*)upvalue);
-
-    // Global variables are also a source of roots.
-    mark_table(&vm.globals);
-    mark_compiler_roots();
-    mark_object((Obj*)vm.init_string);
-}
-
-/// @brief Traverses the stack of grey objects and their references.
-static void trace_references()
-{
-    while (vm.gray_count > 0) {
-        Obj* obj = vm.gray_stack[--vm.gray_count];
-        blacken_object(obj);
-    }
-}
-
-static void sweep()
-{
-    Obj* prev = NULL;
-    Obj* obj = vm.objects;
-    // Walks the linked list of every object in the heap,
-    // stored in the virtual machine.
-    while (obj) {
-        // Marked objects are simply ignored.
-        if (obj->is_marked) {
-            // Every marked object must have their mark flag
-            // unset for the next collection cycle.
-            obj->is_marked = false;
-            prev = obj;
-            obj = obj->next;
-        } else {
-            // If an object is unmarked, it is unlinked
-            // from the list.
-            Obj* white = obj;
-            obj = obj->next;
-
-            if (prev) {
-                prev->next = obj;
-            } else {
-                vm.objects = obj;
-            }
-
-            free_obj(white);
-        }
-    }
-}
-
 void collect_garbage()
 {
 #ifdef DEBUG_LOG_GC
     printf("-- gc begin\n");
-    // Captures the heap size before the collection is triggered.
+    /* Heap size before the collection is triggered. */
     size_t before = vm.bytes_allocated;
 #endif
 
@@ -219,8 +199,7 @@ void collect_garbage()
 
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
-    // Logs how much memory the garbage collector reclaimed during
-    // its execution.
+    /* Total of memory collected. */
     printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
         before - vm.bytes_allocated, before, vm.bytes_allocated, vm.next_gc);
 #endif
