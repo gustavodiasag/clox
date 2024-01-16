@@ -55,12 +55,12 @@ typedef enum
 } TokenType;
 
 /**
- * Structure representing a token in the language.
+ * Structure representing a token of the language.
  * 
  * `type` is the type of the token.
- * `starts` is a pointer to the lexeme's first character in the source stream.
+ * `start` is a pointer to the lexeme's first character.
  * `length` is the size of the lexeme.
- * `line` is where the token was found in the source.
+ * `line` is where the token was found in the source stream.
  */
 typedef struct
 {
