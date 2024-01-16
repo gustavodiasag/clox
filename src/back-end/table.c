@@ -6,6 +6,59 @@
 #include "back-end/value.h"
 #include "memory.h"
 
+static Entry* find_entry(Entry* entries, int size, ObjStr* key)
+{
+    uint32_t index = key->hash & (size - 1);
+    Entry* tombstone = NULL;
+
+    while (true) {
+        Entry* entry = &entries[index];
+
+        if (!entry->key) {
+            if (IS_NIL(entry->value)) {
+                /* Empty entry. */
+                return (tombstone) ? tombstone : entry;
+            } else {
+                if (!tombstone)
+                    tombstone = entry;
+            }
+        } else if (entry->key == key) {
+            return entry;
+        }
+        /* Collision handling (linear probing). */
+        index = (index + 1) & (size - 1);
+    }
+}
+
+static void adjust_size(Table* table, int size)
+{
+    Entry* entries = ALLOCATE(Entry, size);
+
+    for (int i = 0; i < size; i++) {
+        entries[i].key = NULL;
+        entries[i].value = NIL_VAL;
+    }
+    /* Tombstones don't transfer, so the entry amount must be recalculated. */
+    table->count = 0;
+    /* Entries must be remapped. */
+    for (int i = 0; i < table->size; i++) {
+        Entry* entry = &table->entries[i];
+
+        if (!entry->key) {
+            /* Ignore both empty entries and tombstones. */
+            continue;
+        }
+        Entry* dest = find_entry(entries, size, entry->key);
+        dest->key = entry->key;
+        dest->value = entry->value;
+        table->count++;
+    }
+
+    FREE_ARRAY(Entry, table->entries, table->size);
+    table->entries = entries;
+    table->size = size;
+}
+
 void init_table(Table* table)
 {
     table->count = 0;
@@ -17,35 +70,6 @@ void free_table(Table* table)
 {
     FREE_ARRAY(Entry, table->entries, table->size);
     init_table(table);
-}
-
-/// @brief Determines which entry the key provided should go in.
-/// @param entries table's buckets
-/// @param size table capacity
-/// @param key variable to be looked up
-/// @return table entry corresponding to the object key
-static Entry* find_entry(Entry* entries, int size, ObjStr* key)
-{
-    uint32_t index = key->hash & (size - 1);
-    Entry* tombstone = NULL;
-
-    while (true) {
-        Entry* entry = &entries[index];
-
-        if (!entry->key) {
-            if (IS_NIL(entry->value)) {
-                // Empty entry.
-                return (tombstone) ? tombstone : entry;
-            } else {
-                if (!tombstone)
-                    tombstone = entry;
-            }
-        } else if (entry->key == key) {
-            return entry;
-        }
-        // Collision handling.
-        index = (index + 1) & (size - 1);
-    }
 }
 
 bool table_get(Table* table, ObjStr* key, Value* value)
@@ -60,40 +84,6 @@ bool table_get(Table* table, ObjStr* key, Value* value)
     }
     *value = entry->value;
     return true;
-}
-
-/// @brief Resizes and reorganizes the table's entry array.
-/// @param table hash table
-/// @param size updated capacity
-static void adjust_size(Table* table, int size)
-{
-    Entry* entries = ALLOCATE(Entry, size);
-
-    for (int i = 0; i < size; i++) {
-        entries[i].key = NULL;
-        entries[i].value = NIL_VAL;
-    }
-    // Since tombstones are not transferred from the old table
-    // to the new one, the number of entries is reinitialized.
-    table->count = 0;
-    // Once resized, the previous entries must be mapped again
-    // considering that the table's size has been updated.
-    for (int i = 0; i < table->size; i++) {
-        Entry* entry = &table->entries[i];
-
-        if (!entry->key) {
-            // Ignores both empty entries and tombstones.
-            continue;
-        }
-        Entry* dest = find_entry(entries, size, entry->key);
-        dest->key = entry->key;
-        dest->value = entry->value;
-        table->count++;
-    }
-
-    FREE_ARRAY(Entry, table->entries, table->size);
-    table->entries = entries;
-    table->size = size;
 }
 
 bool table_set(Table* table, ObjStr* key, Value value)
@@ -124,8 +114,7 @@ bool table_delete(Table* table, ObjStr* key)
     if (!entry->key) {
         return false;
     }
-    // A tombstone is placed in the entry so that the probe sequence
-    // used when searching a key is not broken.
+    /* A tombstone is placed so that a future probe sequence doesn't break. */
     entry->key = NULL;
     entry->value = BOOL_VAL(true);
 
@@ -154,17 +143,15 @@ ObjStr* table_find(Table* table, const char* chars, int len, uint32_t hash)
         Entry* entry = &table->entries[index];
 
         if (!entry->key) {
-            // Stop if an empty non-tombstone entry is found.
+            /* Stop if an empty non-tombstone entry is found. */
             if (IS_NIL(entry->value)) {
                 return NULL;
             }
-        } else if (entry->key->length == len
-                   && entry->key->hash == hash
-                   && !memcmp(entry->key->chars, chars, len)) {
-
+        } else if (entry->key->length == len &&
+                   entry->key->hash == hash &&
+                   memcmp(entry->key->chars, chars, len) == 0) {
             return entry->key;
         }
-
         index = (index + 1) & (table->size - 1);
     }
 }

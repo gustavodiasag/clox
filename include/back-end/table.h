@@ -6,61 +6,84 @@
 
 #define MAX_LOAD_FACTOR 0.75
 
+/**
+ * Represents a hash table slot.
+ * 
+ * `key` is a string object with the hash key for the entry.
+ * `value` is the value associated with the key.
+ */
 typedef struct
 {
     ObjStr* key;
     Value   value;
 } Entry;
 
-// Hash table that considers variable names as keys
-// and their correspondent value as mappings.
+/**
+ * Structure representing a hash table, which is defined as a dynamic array of
+ * entries.
+ * 
+ * `count` is the current number of entries in the table.
+ * `size` is the capacity of the table.
+ * `entries` is the array of table entries.
+ */
 typedef struct
 {
-    // Number of key/value pairs stored.
     int     count;
     int     size;
     Entry*  entries;
 } Table;
 
-/// @brief Initializes the specified table, nothing is allocated until needed.
-/// @param table hash table
+/**
+ * Initializes a hash table specified by `table`, not performing any
+ * allocation.
+ */
 void init_table(Table* table);
 
-/// @brief Frees the entries allocated for the table.
-/// @param table hash table
+/**
+ * Frees the entry array from a table specified by `table` and resets its
+ * content.
+ */
 void free_table(Table* table);
 
-/// @brief Searches for an entry with the given key.
-/// @param table hash table
-/// @param key variable name
-/// @param value pointer to the resulting value
-/// @return whether the key was found or not
+/**
+ * Searches for an entry with a key specified by `key` on a hash table
+ * specified by `table`. If an entry is found, `value` points to its value, or
+ * `NULL` otherwise.
+ * 
+ * Returns whether the entry was found or not.
+ */
 bool table_get(Table* table, ObjStr* key, Value* value);
 
-/// @brief Adds the given key/value pair to the specified hash table.
-/// @param table hash table
-/// @param key variable name
-/// @param value variable's content
-/// @return whether the entry added is a new one or not
+/**
+ * Inserts an entry composed of `key and `value` to a hash table specified by
+ * `table`.
+ * 
+ * Returns whether the entry was successfully inserted or not. 
+ */
 bool table_set(Table* table, ObjStr* key, Value value);
 
-/// @brief Deletes the entry with the given key from the table.
-/// @param table hash table
-/// @param key variable name
-/// @return whether the value was successfully deleted
+/**
+ * Removes an entry based on its key, specified by `key`, from a hash table
+ * specified by `table`.
+ * 
+ * Returns whether the entry deletion was successfull or not.
+ * 
+*/
 bool table_delete(Table* table, ObjStr* key);
 
-/// @brief Copies all entries from one table to another.
-/// @param src table containing the entries being transferred
-/// @param dest table receiving the new entries
+/**
+ * Copies all entries from a hash table specified by `src` into a hash table
+ * `specified by `dest`.
+ */
 void table_add_all(Table* src, Table* dest);
 
-/// @brief Checks for an interned string with the given content.
-/// @param table virtual machine's string table
-/// @param chars key to be looked up
-/// @param len key length
-/// @param hash key's hash value
-/// @return pointer to the entry containing that key
+/**
+ * Searches for an interned string in a hash table specified by `table` that
+ * matches the length, hash code and content of a stream of characters,
+ * respectively specified by `len`, `hash` and `chars`.
+ * 
+ * Returns a pointer to the key if it was found, or `NULL` otherwise.
+ */
 ObjStr* table_find(Table* table, const char* chars, int len, uint32_t hash);
 
 #endif
