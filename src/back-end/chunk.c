@@ -35,16 +35,16 @@ void write_chunk(Chunk* chunk, uint8_t byte, int line)
     chunk->count++;
 }
 
-// Adds the constant and returns the index where the constant was appended.
 int add_constant(Chunk* chunk, Value value)
 {
-    // When writing the value to the chunk's constant table, there may be
-    // necessary for the dynamic array to grow it's size, which could
-    // trigger collection, sweeping the value before it is added to the
-    // table. To fix that, it is temporarily pushed onto the stack.
+    /*
+     * When writing to the constant table, the dynamic array might grow it's size,
+     * triggering garbage colection and sweeping the value before it's added. To
+     * avoid that, it is temporarily pushed onto the stack.
+     */
     push(value);
     write_value_array(&chunk->constants, value);
-    // Once the constant table contains the object, it is popped off.
+    /* Once the constant table contains the object, it is popped off. */
     pop();
 
     return chunk->constants.count - 1;
