@@ -6,57 +6,64 @@
 #include "table.h"
 #include "value.h"
 
+/** Threshold for ongoing function calls. */
 #define FRAMES_MAX      64
-
-#define GC_THRESHOLD    0x100000
-
+/** Threshold for stack slots. */
 #define STACK_MAX       (FRAMES_MAX * UINT8_COUNT)
 
-// Represents a single ongoing function call.
+/**
+ * Represents an ongoing function call.
+ * 
+ * `closure` is a wrapper around the function being called.
+ * `ip` is the function's instruction pointer.
+ * `slots` is a pointer to the vm's runtime stack, referencing the initial
+ *         available slot for the function.
+ */
 typedef struct
 {
-    // Function being called.
     ObjClosure* closure;
-    // Instead of storing the return address in the callee's
-    // frame, the caller stores its own instruction pointer.
     uint8_t*    ip;
-    // Points into the virtual machine's value stack
-    // at the first slot that the function can use.
     Value*      slots;
 } CallFrame;
 
+/**
+ * Structure representing the language's virtual machine.
+ * 
+ * `frames` is a stack of active function calls.
+ * `frame_count` is the current height of the call frame stack.
+ * `stack` is the runtime stack.
+ * `stack_top` is a pointer to the top of the runtime stack.
+ * `strings` is a table of all the strings created in the program.
+ * `init_string` is the name of a class' initializer method.
+ * `globals` is a table of all the global variables created in a program.
+ * `open_upvalues` is a list of upvalues that point to variables in the runtime
+ *                 stack.
+ * `bytes_allocated` is the total number of bytes the vm allocated.
+ * `next_gc` is a threshold for triggering the next collection.
+ * `objects` is a linked-list of heap-allocated values.
+ * `gray_stack` is a list of objects marked by the garbage collector.
+ * `gray_capacity` is the length of `grey_stack`.
+ * `grey_count` is the current number of grey objects. 
+ */
 typedef struct
 {
-    // Dealing with function calls with stack semantics helps
-    // optimizing memory usage by avoiding heap allocations.
     CallFrame   frames[FRAMES_MAX];
-    // Stores the current height of the call frame stack.
     int         frame_count;
-    // Runtime stack of values.
     Value       stack[STACK_MAX];
-    // Pointer to the top of the stack.
     Value*      stack_top;
-    // Stores all strings created in the program.
     Table       strings;
-    // Name of an initializer method in a class.
     ObjStr*     init_string;
-    // Stores all global variables created in the program.
     Table       globals;
-    // List of open upvalues that point to variables on the stack.
     ObjUpvalue* open_upvalues;
-    // Total number of bytes the vm has allocated.
     size_t      bytes_allocated;
-    // Threshold that triggers the next collection.
     size_t      next_gc;
-    // Linked list keeping track of every heap-allocated object.
     Obj*        objects;
-    // Stores all the grey objects marked by the gc.
     Obj**       gray_stack;
     int         gray_capacity;
-    // Number of grey objects in total.
     int         gray_count;
 } Vm;
 
+/** Possible return statuses during interpretation. */
 typedef enum
 {
     INTERPRET_OK,
@@ -64,23 +71,29 @@ typedef enum
     INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
-// Exposes the global variable so that it can be used
-// on other modules.
 extern Vm vm;
 
-// TODO: Description.
+/** Initializes the virtual machine. */
 void init_vm();
 
-/// @brief Frees all objects once the program is done executing.
+/** Frees all dynamic allocations made by the virtual machine. */
 void free_vm();
 
-// TODO: Description.
+/**
+ * Interprets a program whose content is specified by `source`.
+ * 
+ * Returns the interpretation status.
+ */
 InterpretResult interpret(const char* source);
 
-// TODO: Description.
+/** Pushes a value specified by `value` onto the runtime stack. */
 void push(Value value);
 
-// TODO: Description.
+/**
+ * Pops a value from the top of the runtime stack. 
+ * 
+ * Returns the value popped. 
+ */
 Value pop();
 
 #endif
