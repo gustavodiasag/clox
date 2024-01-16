@@ -13,21 +13,15 @@
 #define ALLOCATE_STR(len) \
     (ObjStr*)allocate_obj(sizeof(ObjStr) + sizeof(char[len]), OBJ_STR)
 
-/// @brief Allocates an object of a given size on the heap.
-/// @param size specified number of bytes for varying extra fields
-/// @param type type of the object being allocated
-/// @return pointer to the object created
 static Obj* allocate_obj(size_t size, ObjType type)
 {
     Obj* obj = (Obj*)reallocate(NULL, 0, size);
     obj->type = type;
-    // Every new object begins unmarked because it hasn't been
-    // determined if it is reachable or not.
+    /* Every new object begins unmarked. */
     obj->is_marked = false;
-    // New object is inserted at the head of the linked list.
+    /* Every new object allocation is tracked by the vm. */
     obj->next = vm.objects;
     vm.objects = obj;
-
 #ifdef DEBUG_LOG_GC
     printf("%p allocate %zu for %d\n", (void*)obj, size, type);
 #endif
@@ -66,9 +60,9 @@ ObjClosure* new_closure(ObjFun* fun)
 {
     ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue*, fun->upvalue_count);
 
-    for (int i = 0; i < fun->upvalue_count; i++)
+    for (int i = 0; i < fun->upvalue_count; i++) {
         upvalues[i] = NULL;
-
+    }
     ObjClosure* closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
     closure->function = fun;
     closure->upvalues = upvalues;
@@ -83,7 +77,6 @@ ObjFun* new_func()
     func->upvalue_count = 0;
     func->arity = 0;
     func->name = NULL;
-
     init_chunk(&func->chunk);
 
     return func;
@@ -93,7 +86,6 @@ ObjInst* new_instance(ObjClass* class)
 {
     ObjInst* instance = ALLOCATE_OBJ(ObjInst, OBJ_INSTANCE);
     instance->class = class;
-
     init_table(&instance->fields);
 
     return instance;
@@ -107,41 +99,33 @@ ObjNative* new_native(NativeFun fun)
     return native;
 }
 
-/// @brief Creates a new string object and initializes its fields.
-/// @param chars string content
-/// @param len string length
-/// @param hash string's hash code
-/// @return pointer to the object created
 static ObjStr* allocate_str(char* chars, int len, uint32_t hash)
 {
     ObjStr* str = ALLOCATE_STR(len);
     str->hash = hash;
     str->length = len;
     memcpy(str->chars, chars, len);
-    // Object is pushed onto the stack to guarantee it is reachable in case
-    // garbage collection is triggered while resizing the interned strings
-    // table.
+    /*
+     * The string is pushed onto the runtime stack to avoid collection if it is
+     * triggered while resizing the interned strings table.
+     */
     push(OBJ_VAL(str));
-    // Whenever a new string is created, it's added to the virtual machine's table.
+    /* String interning. */
     table_set(&vm.strings, str, NIL_VAL);
     pop();
 
     return str;
 }
 
-/// @brief Short version of the FNV-1a hashing algorithm.
-/// @param key string to be hashed
-/// @param len string length
-/// @return hash value for that specific key
 static uint32_t hash_str(const char* key, int len)
 {
+    /* FNV-1a hash. */
     uint32_t hash = 2166136261u;
 
     for (int i = 0; i < len; i++) {
         hash ^= (uint8_t)key[i];
         hash *= 16777619;
     }
-
     return hash;
 }
 
@@ -151,34 +135,28 @@ ObjStr* take_str(char* data, int len)
     ObjStr* interned = table_find(&vm.strings, data, len, hash);
 
     if (interned) {
-        // Duplicate string is no longer needed.
+        /* Duplicate string is no longer needed. */
         FREE_ARRAY(char, data, len + 1);
-
         return interned;
     }
-
     return allocate_str(data, len, hash);
 }
 
 ObjStr* copy_str(const char* chars, int len)
 {
     uint32_t hash = hash_str(chars, len);
-
     ObjStr* interned = table_find(&vm.strings, chars, len, hash);
 
-    if (interned)
+    if (interned) {
         return interned;
-
+    }
     char* heap_chars = ALLOCATE(char, len + 1);
     memcpy(heap_chars, chars, len);
-
     heap_chars[len] = '\0';
 
     return allocate_str(heap_chars, len, hash);
 }
 
-/// @brief Prints the name of the given function object.
-/// @param func function object
 static void print_func(ObjFun* func)
 {
     if (!func->name) {
