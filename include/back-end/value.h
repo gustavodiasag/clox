@@ -5,6 +5,11 @@
 
 #include "common.h"
 
+/* Object forward declaration. */
+typedef struct Obj Obj;
+/* String object forward declaration. */
+typedef struct ObjStr ObjStr;
+
 #ifdef NAN_BOXING
 
 #define SIGN_BIT        ((uint64_t)0x8000000000000000)
@@ -48,22 +53,24 @@
 
 #endif
 
-// Contains the state shared across all object types.
-typedef struct Obj Obj;
-
-// Each object type will have an `obj_t` as its first field. This is useful
-// considering struct pointers can be converted to point to its first field,
-// so any piece of code that intends to manipulate all objects can treat
-// them as `obj_t *` and ignore other following fields.
-typedef struct ObjStr ObjStr;
-
 #ifdef NAN_BOXING
 
+/**
+ * With NaN-boxing, the language's types are represented with a 64-bit double.
+ * 
+ * Numeric values, which are floating point numbers, directly use the type,
+ * still having to be type checked at runtime. Object, boolean and nil values
+ * use quiet NaNs by having the exponent bits and highest mantissa bit set.
+ * 
+ * Nil, false and true are defined with the sign bit unset and the byte values
+ * of 1, 2 and 3, respectively. Objects have the sign bit set and their pointer
+ * stored in the lower 48 mantissa bits.
+ */
 typedef uint64_t Value;
 
 #else
 
-// All types supported in the language.
+/** Represents the types supported by the language */
 typedef enum
 {
     VAL_BOOL,
@@ -72,7 +79,12 @@ typedef enum
     VAL_OBJ
 } ValueType;
 
-// Tagged union representing a type and its correspondent value.
+/**
+ * Structure representing the language's dynamic type information.
+ * 
+ * `type` is the type of the value.
+ * `as` is the possible values that can be stored. 
+ */
 typedef struct
 {
     ValueType   type;
@@ -80,23 +92,18 @@ typedef struct
     {
         bool    boolean;
         double  number;
-        // A value whose state lives on the heap memory.
         Obj*    obj;
     } as;
 } Value;
 
 #endif
 
-//  List of values that appear as literals in the program.
-typedef struct
-{
-    int     capacity;
-    int     count;
-    Value*  values;
-} ValueArray;
-
 #ifdef NAN_BOXING
 
+/**
+ * Converts a double-precision, floating point number specified by `val` to a
+ * NaN-boxed value of the language.
+ */
 static inline Value num_from_val(double val)
 {
     Value value;
@@ -104,6 +111,10 @@ static inline Value num_from_val(double val)
     return value;
 }
 
+/**
+ * Converts a NaN-boxed value of the language specified by `val` to a 
+ * double-precision, floating point number.
+ */
 static inline double val_from_num(Value val)
 {
     double num;
@@ -113,22 +124,36 @@ static inline double val_from_num(Value val)
 
 #endif
 
-// TODO: Description.
+/** 
+ * Represents a dynamic array of values.
+ * 
+ * `count` is the current amount of values in the vector.
+ * `capacity` is the size of the vector.
+ * `values` is the value array.
+ */
+typedef struct
+{
+    int     count;
+    int     capacity;
+    Value*  values;
+} ValueArray;
+
+/**
+ * Initializes a value vector specified by `array`, not performing any
+ * allocation.
+ */
 void init_value_array(ValueArray* array);
 
-// TODO: Description.
+/** Inserts a value specified by `value` to a vector specified by `array`. */
 void write_value_array(ValueArray* array, Value value);
 
-// TODO: Description.
+/** Frees and resets the memory of a value vector specified by `array`. */
 void free_value_array(ValueArray* array);
 
-// TODO: Description.
+/** Pretty prints a value specified by `value`. */
 void print_value(Value value);
 
-/// @brief Compares the equality between two values, allowing multiple types.
-/// @param a first value
-/// @param b second value
-/// @return whether the values are different or not
+/** Checks for equality between two values, specified by `a` and `b`. */
 bool values_equal(Value a, Value b);
 
 #endif

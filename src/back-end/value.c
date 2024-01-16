@@ -7,9 +7,9 @@
 
 void init_value_array(ValueArray* array)
 {
-    array->values = NULL;
-    array->capacity = 0;
     array->count = 0;
+    array->capacity = 0;
+    array->values = NULL;
 }
 
 void write_value_array(ValueArray* array, Value value)
@@ -19,7 +19,6 @@ void write_value_array(ValueArray* array, Value value)
         array->capacity = GROW_CAPACITY(old_capacity);
         array->values = GROW_ARRAY(Value, array->values, old_capacity, array->capacity);
     }
-
     array->values[array->count] = value;
     array->count++;
 }
@@ -68,9 +67,9 @@ bool values_equal(Value a, Value b)
     }
     return a == b;
 #else
-    if (a.type != b.type)
+    if (a.type != b.type) {
         return false;
-
+    }
     switch (a.type) {
     case VAL_BOOL:
         return AS_BOOL(a) == AS_BOOL(b);
