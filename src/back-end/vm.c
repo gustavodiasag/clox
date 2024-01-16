@@ -3,12 +3,13 @@
 #include <string.h>
 #include <time.h>
 
-#include "back-end/object.h"
 #include "back-end/vm.h"
 #include "common.h"
 #include "debug.h"
 #include "front-end/compiler.h"
 #include "memory.h"
+
+#define GC_THRESHOLD    0x100000
 
 Vm vm;
 
