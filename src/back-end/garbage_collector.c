@@ -145,7 +145,8 @@ void mark_object(Obj* obj)
 
     if (vm.gray_capacity < vm.gray_count + 1) {
         vm.gray_capacity = GROW_CAPACITY(vm.gray_capacity);
-        vm.gray_stack = (Obj**)realloc(vm.gray_stack, sizeof(Obj*) * vm.gray_capacity);
+        vm.gray_stack =
+            (Obj**)realloc(vm.gray_stack, sizeof(Obj*) * vm.gray_capacity);
 
         if (!vm.gray_stack) {
             exit(1);
