@@ -79,13 +79,6 @@ void init_vm();
 /** Frees all dynamic allocations made by the virtual machine. */
 void free_vm();
 
-/**
- * Interprets a program whose content is specified by `source`.
- * 
- * Returns the interpretation status.
- */
-InterpretResult interpret(const char* source);
-
 /** Pushes a value specified by `value` onto the runtime stack. */
 void push(Value value);
 
@@ -95,5 +88,12 @@ void push(Value value);
  * Returns the value popped. 
  */
 Value pop();
+
+/**
+ * Interprets a program whose content is specified by `source`.
+ * 
+ * Returns the interpretation status.
+ */
+InterpretResult interpret(const char* source);
 
 #endif

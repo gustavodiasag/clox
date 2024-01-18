@@ -13,10 +13,6 @@
 
 Vm vm;
 
-/// @brief Defines one of the native functions supported by the language.
-/// @param argc number of arguments
-/// @param argv pointer to the first argument
-/// @return elapsed time since the program started running.
 static Value clock_native(int argc, Value* argv)
 {
     return NUM_VAL((double)clock() / CLOCKS_PER_SEC);
@@ -29,19 +25,14 @@ static void reset_stack()
     vm.open_upvalues = NULL;
 }
 
-/// @brief Variadic function for runtime error reporting.
-/// @param format specifies the output string format
-/// @param params arguments to be printed according to the format
 static void runtime_err(const char* format, ...)
 {
-    // Enables passing an arbitrary number of arguments to the function.
     va_list args;
     va_start(args, format);
-    // Variadic version of printf.
     vfprintf(stderr, format, args);
     va_end(args);
     fputs("\n", stderr);
-    // Stack trace of each function executing when the error occurred.
+    /* Error stack trace. */
     for (int i = vm.frame_count - 1; i >= 0; i--) {
         CallFrame* frame = &vm.frames[i];
         ObjFun* func = frame->closure->function;
@@ -58,9 +49,6 @@ static void runtime_err(const char* format, ...)
     reset_stack();
 }
 
-/// @brief Defines a new native function exposed to the language.
-/// @param name function name
-/// @param function native function
 static void define_native(const char* name, NativeFun function)
 {
     push(OBJ_VAL(copy_str(name, (int)strlen(name))));
@@ -69,75 +57,59 @@ static void define_native(const char* name, NativeFun function)
     table_set(&vm.globals, AS_STR(vm.stack[0]), vm.stack[1]);
 }
 
-/// @brief Looks at the stack without popping any value stored.
-/// @param offset how far from the top of the stack to look
-/// @return the value at the position specified
 static Value peek(int offset)
 {
     return vm.stack_top[-1 - offset];
 }
 
-/// @brief Initializes the next call frame on the stack.
-/// @param func closure being called (all functions are closures)
-/// @param args amount of arguments supported
-/// @return status of successfully initialized frame
 static bool init_frame(ObjClosure* closure, int args)
 {
-    // The overlapping stack windows work based on the assumption
-    // that a call passes exactly one argument for each of the
-    // function's parameters, but considering that lox is dinamically
-    // typed, a user could pass too many or too few arguments.
     if (args != closure->function->arity) {
         runtime_err("Expected %d arguments but got %d.",
             closure->function->arity, args);
         return false;
     }
-    // Deals with a deep call chain.
     if (vm.frame_count == FRAMES_MAX) {
         runtime_err("Stack overflow.");
         return false;
     }
     CallFrame* frame = &vm.frames[vm.frame_count++];
-
     frame->closure = closure;
     frame->ip = closure->function->chunk.code;
-    // Provides the window into the stack for the new frame,
-    // the arithmetic ensures that the arguments already on
-    // the stack line up with the function's parameters.
+    /*
+     * Ensure that the arguments already on the stack line up with the
+     * function's parameters.
+     */
     frame->slots = vm.stack_top - args - 1;
 
     return true;
 }
 
-/// @brief Executes a function call.
-/// @param callee value containing the function object
-/// @param args amount of arguments supported
-/// @return whether the call was successfully executed or not
 static bool call_value(Value callee, int args)
 {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
         case OBJ_BOUND_METHOD: {
             ObjBoundMethod* bound = AS_BOUND_METHOD(callee);
-            // When a method is called, the top of the stack
-            // contains all of the arguments, and then just
-            // under those is the closure of the called method.
-            // The receiver is then inserted into that slot.
+            /*
+             * When a method is called, the stack top stores the arguments and
+             * the method's closure. The receiver is inserted into that slot.
+             */
             vm.stack_top[-args - 1] = bound->receiver;
 
             return init_frame(bound->method, args);
         }
         case OBJ_CLASS: {
-            // If the value being called is a class, then it
-            // is treated as a constructor call.
+            /* Behaves as a constructor call. */
             ObjClass* class = AS_CLASS(callee);
             vm.stack_top[-args - 1] = OBJ_VAL(new_instance(class));
             
             Value initializer;
-            // A class isn't required to have an initializer. If omitted,
-            // the runtime returns the uninitialized instance, but if any
-            // arguments were passed when an instance is initialized when
-            // there's no `init` method, its a runtime error.   
+            /*
+             * A class isn't required to have an initializer. If omitted, the
+             * uninitialized instance is returned, but no arguments should be
+             * provided.
+             */
             if (table_get(&class->methods, vm.init_string, &initializer)) {
                 return init_frame(AS_CLOSURE(initializer), args);
             } else if (args != 0) {
@@ -158,7 +130,7 @@ static bool call_value(Value callee, int args)
             return true;
         }
         default:
-            // Non-callable object type.
+            /* Non-callable object type. */
             break;
         }
     }
@@ -167,12 +139,6 @@ static bool call_value(Value callee, int args)
     return false;
 }
 
-/// @brief Combines the virtual machine behavior for the `OP_GET_PROPERTY`
-/// and the `OP_CALL` instructions.
-/// @param class class from which the instance belongs to
-/// @param name method name
-/// @param args amount of arguments passed to the method
-/// @return whether the invocation succeded or not
 static bool invoke_from_class(ObjClass* class, ObjStr* name, int args)
 {
     Value method;
@@ -183,17 +149,9 @@ static bool invoke_from_class(ObjClass* class, ObjStr* name, int args)
     return init_frame(AS_CLOSURE(method), args);
 }
 
-/// @brief Retrieves the receiver object from the stack and invokes
-/// the method.
-/// @param name method name 
-/// @param args amount of arguments passed to the method
-/// @return whether the invocation succeded or not
 static bool invoke(ObjStr* name, int args)
 {
     Value receiver = peek(args);
-    // The invoke operation assumes that the object from which
-    // the method was called is an instance, so an invalid type
-    // of value being used turns to be a runtime error.  
     if (!IS_INSTANCE(receiver)) {
         runtime_err("Only instances have methods.");
         return false;
@@ -208,10 +166,6 @@ static bool invoke(ObjStr* name, int args)
     return invoke_from_class(instance->class, name, args);
 }
 
-/// @brief Places the given method in the runtime stack.
-/// @param class contains the method table
-/// @param name method name
-/// @return whether the method was found in the table
 static bool bind_method(ObjClass* class, ObjStr* name)
 {
     Value method;
@@ -226,9 +180,6 @@ static bool bind_method(ObjClass* class, ObjStr* name)
     return true;
 }
 
-/// @brief Closes over a local variable from the surrounding function.
-/// @param local pointer to the captured local's slot
-/// @return pointer to the upvalue object created
 static ObjUpvalue* capture_upvalue(Value* local)
 {
     ObjUpvalue* prev_upvalue = NULL;
@@ -238,7 +189,6 @@ static ObjUpvalue* capture_upvalue(Value* local)
         prev_upvalue = curr_upvalue;
         curr_upvalue = curr_upvalue->next;
     }
-
     if (curr_upvalue && curr_upvalue->location == local) {
         return curr_upvalue;
     }
@@ -250,12 +200,9 @@ static ObjUpvalue* capture_upvalue(Value* local)
     } else {
         prev_upvalue->next = upvalue;
     }
-
     return upvalue;
 }
 
-/// @brief Closes every open upvalue pointing to the given slot.
-/// @param last pointer to a stack slot
 static void close_upvalues(Value* last)
 {
     while (vm.open_upvalues && vm.open_upvalues->location >= last) {
@@ -267,8 +214,6 @@ static void close_upvalues(Value* last)
     }
 }
 
-/// @brief Stores the closure for a method in the class's method table
-/// @param name method
 static void define_method(ObjStr* name)
 {
     Value method = peek(0);
@@ -278,22 +223,18 @@ static void define_method(ObjStr* name)
     pop();
 }
 
-/// @brief Checks if the specified value has a false behaviour.
-/// @param value
-/// @return whether the value is true or not
 static bool is_falsey(Value value)
 {
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 
-/// @brief Concatenates two string objects.
 static void concat()
 {
-    // Concatenating two strings requires allocating a new character
-    // array on the heap, which can trigger garbage collection. To
-    // maintain a reference to those objects so they can be reached
-    // in the marking process, they are peeked instead of popped
-    // from the stack.
+    /*
+     * String concatenation leads to a new heap allocation, which can trigger
+     * garbage collection. To keep the objects reachable, they are peeked
+     * instead of popped from the stack.
+     */
     ObjStr* b = AS_STR(peek(0));
     ObjStr* a = AS_STR(peek(1));
 
@@ -305,7 +246,6 @@ static void concat()
     chars[len] = '\0';
 
     ObjStr* result = take_str(chars, len);
-
     pop();
     pop();
     push(OBJ_VAL(result));
@@ -314,18 +254,17 @@ static void concat()
 static InterpretResult run()
 {
     CallFrame* frame = &vm.frames[vm.frame_count - 1];
-// Reads the byte currently pointed at and advances the frame's ip.
+/* Reads the byte currently pointed at and advances the frame's ip. */
 #define READ_BYTE() (*frame->ip++)
-// Reads the next two bytes from the chunk, building a 16-bit unsigned integer.
+/* Reads the next two bytes from the chunk. */
 #define READ_SHORT() \
     (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
-// Reads the next byte from the bytecode, treats the resulting number as an
-// index and looks up the corresponding value in the chunk's constant table.
+/* Reads a byte and treats it as an index to the chunk's constant table. */
 #define READ_CONSTANT() \
     (frame->closure->function->chunk.constants.values[READ_BYTE()])
-// Returns a string at a specific index in the constant table.
+/* Wrapper around `READ_CONSTANT`, treats the value obtained as a string. */
 #define READ_STR() AS_STR(READ_CONSTANT())
-// Executes numerical infix operations, pushing the result into the stack.
+/* Executes numerical infix operations, pushing the result onto the stack. */
 #define BINARY_OP(value_type, op)                    \
     do {                                             \
         if (!IS_NUM(peek(0)) || !IS_NUM(peek(1))) {  \
@@ -335,12 +274,11 @@ static InterpretResult run()
         double b = AS_NUM(pop());                    \
         double a = AS_NUM(pop());                    \
         push(value_type(a op b));                    \
-    } while (false); // Ensures that all statements are within the same scope.
+    } while (false); /* Ensures that statements are within the same scope. */
 
     while (true) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("          ");
-
         for (Value* v = vm.stack; v < vm.stack_top; v++) {
             printf("[ ");
             print_value(*v);
@@ -382,18 +320,15 @@ static InterpretResult run()
         }
         case OP_GLOBAL: {
             ObjStr* name = READ_STR();
-
             table_set(&vm.globals, name, peek(0));
             pop();
             break;
         }
         case OP_SET_GLOBAL: {
             ObjStr* name = READ_STR();
-
             if (table_set(&vm.globals, name, peek(0))) {
                 table_delete(&vm.globals, name);
                 runtime_err("Undefined variable '%s'.", name->chars);
-
                 return INTERPRET_RUNTIME_ERROR;
             }
             break;
@@ -401,7 +336,6 @@ static InterpretResult run()
         case OP_GET_GLOBAL: {
             ObjStr* name = READ_STR();
             Value value;
-
             if (!table_get(&vm.globals, name, &value)) {
                 runtime_err("Undefined variable '%s'.", name->chars);
                 return INTERPRET_RUNTIME_ERROR;
@@ -410,61 +344,49 @@ static InterpretResult run()
             break;
         }
         case OP_GET_UPVALUE: {
-            // Index into the current function's upvalue array.
+            /* Index to the current function's upvalue array. */
             uint8_t slot = READ_BYTE();
-            // Looks up the correspondent upvalue and dereference
-            // its location pointer to read the value in that slot.
             push(*frame->closure->upvalues[slot]->location);
             break;
         }
         case OP_SET_UPVALUE: {
             uint8_t slot = READ_BYTE();
-            // Takes the value at the top of the stack and store it
-            // into the slot pointed to by the chosen upvalue.
+            /*
+             * Takes stack-top value and stores it into the slot pointed by
+             * the upvalue.
+             */
             *frame->closure->upvalues[slot]->location = peek(0);
             break;
         }
         case OP_GET_PROPERTY: {
-            // Only instances are allowed to have fields. So there's
-            // the need to check that the value is an instance before
-            // accessing any fields on it.
             if (!IS_INSTANCE(peek(0))) {
                 runtime_err("Only instances have properties.");
-
                 return INTERPRET_RUNTIME_ERROR;
             }
             ObjInst* instance = AS_INSTANCE(peek(0));
             ObjStr* name = READ_STR();
-
             Value value;
 
             if (table_get(&instance->fields, name, &value)) {
-                pop(); /* instance */
+                pop();
                 push(value);
                 break;
             }
-            // Fields take priority over methods, shadowing them
-            // if the instance doesn't have a field with the
-            // property name, then it might refer to a method.
             if (!bind_method(instance->class, name)) {
-                // If it couldn't be found, that means a runtime error.
                 return INTERPRET_RUNTIME_ERROR;
             }
             break;
         }
         case OP_SET_PROPERTY: {
-            // Storing data on a field of a value that is not an
-            // instance is considered an error.
             if (!IS_INSTANCE(peek(1))) {
                 runtime_err("Only instances have fields.");
-
                 return INTERPRET_RUNTIME_ERROR;
             }
-            // At this point, the top of the stack has the instance
-            // whose field is being sest and above that, the value
-            // to be stored. The operand is read and the field name
-            // string is determined. With that, the value on top of
-            // the stack is stored into the instance's field table.
+            /*
+             * The stack-top contains the value to be stored and the instance
+             * whose field is being set. The instruction's operand is read and
+             * the field name string is determined.
+             */
             ObjInst* instance = AS_INSTANCE(peek(1));
             table_set(&instance->fields, READ_STR(), peek(0));
 
@@ -518,7 +440,6 @@ static InterpretResult run()
         case OP_NEGATE: {
             if (!IS_NUM(peek(0))) {
                 runtime_err("Operand must be a number.");
-
                 return INTERPRET_RUNTIME_ERROR;
             }
             push(NUM_VAL(-AS_NUM(pop())));
@@ -536,7 +457,6 @@ static InterpretResult run()
         }
         case OP_JUMP_FALSE: {
             uint16_t offset = READ_SHORT();
-
             if (is_falsey(peek(0))) {
                 frame->ip += offset;
             }
@@ -549,7 +469,6 @@ static InterpretResult run()
         }
         case OP_CALL: {
             int args = READ_BYTE();
-            
             if (!call_value(peek(args), args)) {
                 return INTERPRET_RUNTIME_ERROR;
             }
@@ -587,16 +506,9 @@ static InterpretResult run()
                 uint8_t index = READ_BYTE();
 
                 if (is_local) {
-                    // Here, `capture_value` takes a pointer to the local's slot
-                    // in the surrounding function's stack window. That window
-                    // begins at `frame->slots` which points to slot zero.
-                    // Adding `index` offsets that to the right slot.
-                    closure->upvalues[i] = capture_upvalue(frame->slots + index);
+                    closure->upvalues[i] = capture_upvalue(
+                        frame->slots + index);
                 } else {
-                    // At the moment a function's declaration is being executed,
-                    // the current function is the surrounding one. So, the
-                    // upvalue from the enclosing function is directly read from
-                    // `frame`.
                     closure->upvalues[i] = frame->closure->upvalues[index];
                 }
             }
@@ -613,21 +525,19 @@ static InterpretResult run()
         }
         case OP_INHERIT: {
             Value super = peek(1);
-            // An object that is not a class cannot be inherited from.
             if (!IS_CLASS(super)) {
                 runtime_err("Superclass must be a class.");
                 return INTERPRET_RUNTIME_ERROR;
             }
             ObjClass* sub = AS_CLASS(peek(0));
             table_add_all(&AS_CLASS(super)->methods, &sub->methods);
-            // Pop subclass. 
+            /* Pop subclass. */ 
             pop();
             break;
         }
         case OP_RETURN: {
             Value result = pop();
-            // Closes variables defined in the context of the function's scope,
-            // such as it's parameters or locals declared inside its body.
+
             close_upvalues(frame->slots);
             vm.frame_count--;
 
@@ -662,10 +572,8 @@ void init_vm()
     vm.gray_count = 0;
     vm.gray_capacity = 0;
     vm.gray_stack = NULL;
-
     init_table(&vm.globals);
     init_table(&vm.strings);
-
     vm.init_string = NULL;
     vm.init_string = copy_str("init", 4);
 
@@ -689,7 +597,6 @@ void push(Value value)
 Value pop()
 {
     vm.stack_top--;
-
     return *vm.stack_top;
 }
 
