@@ -13,8 +13,9 @@
 
 static void mark_array(ValueArray* array)
 {
-    for (int i = 0; i < array->count; i++)
+    for (int i = 0; i < array->count; i++) {
         mark_value(array->values[i]);
+    }
 }
 
 static void blacken_object(Obj* obj)
@@ -140,17 +141,16 @@ void mark_object(Obj* obj)
     print_value(OBJ_VAL(obj));
     printf("\n");
 #endif
-
     obj->is_marked = true;
 
     if (vm.gray_capacity < vm.gray_count + 1) {
         vm.gray_capacity = GROW_CAPACITY(vm.gray_capacity);
         vm.gray_stack = (Obj**)realloc(vm.gray_stack, sizeof(Obj*) * vm.gray_capacity);
 
-        if (!vm.gray_stack)
+        if (!vm.gray_stack) {
             exit(1);
+        }
     }
-
     vm.gray_stack[vm.gray_count++] = obj;
 }
 
@@ -189,14 +189,12 @@ void collect_garbage()
     /* Heap size before the collection is triggered. */
     size_t before = vm.bytes_allocated;
 #endif
-
     mark_roots();
     trace_references();
     table_remove_white(&vm.strings);
     sweep();
 
     vm.next_gc = vm.bytes_allocated * GC_HEAP_GROW_FACTOR;
-
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
     /* Total of memory collected. */
