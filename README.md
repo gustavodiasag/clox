@@ -33,7 +33,7 @@ Where options are non-exclusive and consist of:
 
 ## Run
 
-Lox programs can be interpreted as source files or through a REPL interface, by just omitting the file path. 
+Lox programs can be interpreted as source files or through a REPL interface, by just omitting the file path. A few [example programs](examples/) are provided.
 
 ```sh
 $ ./clox [filepath]
