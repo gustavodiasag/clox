@@ -1,3 +1,9 @@
+# Transpilers
+
+While implementing a programming language, one may choose to target another source language as a sort of high-level intermediate representation. Lexing, parsing and static analysis would still be required, but instead of lowering the semantics down to primitive representations or even machine code, the back-end of the language would produce a string of valid source code for some high level language. Then, a compilation tool for that targeted language could be used in order to execute the code. 
+
+If the source language is only a simple syntatic skin over the target language, it may skip analysis entirely and go straight to outputting the analogous syntax in the destination language. However, if the two languages are more semantically different, additional phases of a full compiler implementation may take place.
+
 # Amortized analysis
 
 Method for analysing a given algorithm's complexity or how much of a resource, especially time or memory, it takes to execute. The motivation for amortized analysis is that looking at the worst-case time per operation can be too pessimistic if the only way to produce an expensive operation is to set it up with a large number of cheap operations beforehand.
@@ -212,3 +218,6 @@ In the perspective of mostly all machines nowadays, a 64-bit, double-precision, 
 - Next to that are 11 **exponend** bits. These tell how far the mantissa is shifted away from the decimal point.
 
 - The highest bit is the **sign bit**, which indicates whether the number is positive or negative.
+
+# NaN boxing
+
