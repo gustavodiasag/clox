@@ -4,6 +4,10 @@ While implementing a programming language, one may choose to target another sour
 
 If the source language is only a simple syntatic skin over the target language, it may skip analysis entirely and go straight to outputting the analogous syntax in the destination language. However, if the two languages are more semantically different, additional phases of a full compiler implementation may take place.
 
+# Static and dynamic dispatch
+
+In a statically typed language like C++, method lookup typically happens at compile time based on the *static* type of the instance, hence **static dispatch**. In contrast, **dynamic dispatch** looks up the class of the actual instance object at runtime. This is how virtual methods in statically typed languages and all methods in a dynamically typed language like Lox work.
+
 # Amortized analysis
 
 Method for analysing a given algorithm's complexity or how much of a resource, especially time or memory, it takes to execute. The motivation for amortized analysis is that looking at the worst-case time per operation can be too pessimistic if the only way to produce an expensive operation is to set it up with a large number of cheap operations beforehand.
