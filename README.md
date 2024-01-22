@@ -6,10 +6,6 @@ Two versions of the interpreter are instructed by the author, the first one bein
 
 The main reason for writing another Lox interpreter using a different approach is that walking through an Abstract Syntax Tree is not [memory-efficient](http://gameprogrammingpatterns.com/data-locality.html), since each piece of syntax in the language becomes a heap-stored AST node. To avoid that, this implementation focuses on exploring and taking advantage of CPU caching by ways of representing code in memory in a denser and more ordered way.
 
-# Notes
-
-Besides the main purpose of the book, which is the actual implementation of the interpreters, a bunch of concepts and theorems regarding computer science as a whole is also presented throughout its content. Considering that some of this information, if not all of it, is crucial for one's path becoming a somewhat decent computer scientist, a whole [separate section](NOTES.md) is dedicated to it.
-
 # Usage
 
 ## Build
@@ -42,6 +38,108 @@ Lox programs can be interpreted as source files or through a REPL interface, by 
 ```sh
 $ ./clox [filepath]
 ```
+
+# Lox
+
+In a brief description, Lox is a high-level, dynamically-typed, garbage-collected programming language that borrows ideas from functional, procedural and object-oriented programming to provide the flexibility expected of a simple scripting language. The syntax rules in the [Extended Backus-Naur Form](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form) (EBNF) notation for Lox are presented below.
+
+```ebnf
+program         = declaration * EOF ;
+
+(* Declarations. *)
+
+declaration     = class_decl | fun_decl | var_decl | statement ;
+
+class_decl      = "class" IDENTIFIER ( "<" IDENTIFIER ) ? "{" function * "}"
+
+fun_decl        = "fun" function ;
+
+var_decl        = "var" IDENTIFIER ( "=" expression ) ? ";" ;
+
+(* Statements. *)
+
+statement       = expr_stmt
+                | for_stmt
+                | if_stmt
+                | print_stmt
+                | return_stmt
+                | while_stmt
+                | block
+                ;
+
+expr_stmt       = expression ";" ;
+
+for_stmt        = "for" "(" ( var_decl | expr_stmt | ";" )
+                    expression ? ";"
+                    expression ? ")" statement
+
+if_stmt         = "if" "(" expression ")" statement ("else" statement) ? ;
+
+print_stmt      = "print" expression ";" ;
+
+return_stmt     = "return" expression ? ";" ;
+
+whle_stmt       = "while" "(" expression ")" statement ;
+
+block           = "{" declaration * "}" ;
+
+(* Expressions. *)
+
+expression      = assignment ;
+
+assignment      = ( call "." ) ? IDENTIFIER "=" assignment | logic_or ;
+
+logic_or        = logic_and ( "or" logic_and ) * ;
+
+logic_and       = equality ( "and" equality) * ;
+
+equality        = comparison ( ( "!=" | "==" ) comparison ) * ;
+
+comparison      = term ( ( ">" | ">=" | "<" | "<=" ) term ) * ;
+
+term            = factor ( ( "-" | "+" ) factor ) * ;
+
+factor          = unary ( ( "/" | "*" ) unary ) * ;
+
+unary           = ( "!" | "-" ) unary | call ;
+
+call            = primary ( "(" arguments ? ")" | "." IDENTIFIER ) * ;
+
+primary         = "true"
+                | "false"
+                | "nil"
+                | "this"
+                | NUMBER
+                | STRING
+                | IDENTIFIER
+                | "(" expression ")"
+                | "super" "." IDENTIFIER
+                ;
+
+(* Utility rules. *)
+
+function        = IDENTIFIER "(" parameters ? ")" block ;
+
+parameters      = IDENTIFIER ( "," IDENTIFIER ) * ;
+
+arguments       = expression ( "," expression ) * ;
+
+(* Lexical grammar. *)
+
+NUMBER          = DIGIT + ( "." DIGIT ) ? ;
+
+STRING          = '"' ( ? all characters ? - '"' ) * '"' ;
+
+IDENTIFIER      = ALPHA ( ALPHA | DIGIT ) * ;
+
+ALPHA           = "a" ... "z" | "A" ... "Z" | "_" ;
+
+DIGIT           = "0" ... "9" ;
+```
+
+# Notes
+
+Besides the main purpose of the book, which is the actual implementation of the interpreters, a bunch of concepts and theorems regarding computer science as a whole is also presented throughout its content. Considering that some of this information, if not all of it, is crucial for one's path becoming a somewhat decent computer scientist, a whole [separate section](NOTES.md) is dedicated to it.
 
 # License
 
