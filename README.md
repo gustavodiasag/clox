@@ -29,7 +29,7 @@ cmake [-D <option>=1 ] ..
 
 Where options are non-exclusive and consist of:
 
-- `DEBUG`: logs the bytecode generated after compilation and the runtime stack state during the execution of each instruction.
+- `DEBUG`: logs the bytecode compiled and the runtime stack state during the execution of each instruction.
 
 - `LOG_GC`: triggers garbage collection more frequently, logging its [tracing](NOTES.md/#mark-sweep-garbage-collection) and the amount of memory reclaimed.
 
