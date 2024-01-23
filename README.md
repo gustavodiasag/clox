@@ -109,6 +109,28 @@ class Text < Example {
 }
 ```
 
+## Closures
+
+Considering that functions are defined as first-class values in Lox and that function declarations are statements, the combination of those along with block scope can lead to a behaviour whose semantics are specified by **closures**.
+
+```js
+fun outer() {
+    var outside = "outside";
+
+    fun inner() {
+        print outside;
+    }
+
+    return inner;
+}
+
+var fn = outer();
+// ...
+fn();
+```
+
+In the above example, `inner()` must keep a reference to any surrounding variables that it uses so that they still exist after the outer function has returned. For that, the function [closes over](NOTES.md/#closure-implementation) the variables' [values](NOTES.md/#upvalues) at the moment of the call.
+
 ## Grammar
 
 The syntax rules in the [Extended Backus-Naur Form](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form) (EBNF) notation for Lox are presented below.
