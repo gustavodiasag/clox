@@ -41,7 +41,38 @@ $ ./clox [filepath]
 
 # Lox
 
-In a brief description, Lox is a high-level, dynamically-typed, garbage-collected programming language that borrows ideas from functional, procedural and object-oriented programming to provide the flexibility expected of a simple scripting language. The syntax rules in the [Extended Backus-Naur Form](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form) (EBNF) notation for Lox are presented below.
+In a brief description, Lox is a high-level, dynamically typed, garbage-collected programming language that borrows ideas from functional, procedural and object-oriented programming to provide the flexibility expected of a simple scripting language.
+
+It provides most of the functionalities from a basic language implementation, such as data types, expressions (arithmetic, comparative and logical), statements, variables, control flow (conditionals and loops) and functions. Besides that, advanced features such as classes and closures are also specified, whose complexity is deserving of a more thorough depiction.
+
+## Classes
+
+A class and its methods can be declared in Lox like so:
+
+```js
+class Example {
+    foo() {
+        print "Foo.";
+    }
+
+    bar(baz) {
+        print "This is" + baz + ".";
+    }
+}
+```
+
+When the declaration is executed, Lox creates a class object and stores it in a variable named after the class, which turns it to a first-class value in the language.
+
+Classes in Lox are also factory functions for instances, producing them when called like so.
+
+```js
+var example = Example();
+print example; // "Example instance".
+```
+
+## Grammar
+
+The syntax rules in the [Extended Backus-Naur Form](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form) (EBNF) notation for Lox are presented below.
 
 ```ebnf
 program         = declaration * EOF ;
