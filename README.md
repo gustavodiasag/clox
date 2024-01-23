@@ -39,11 +39,15 @@ Lox programs can be interpreted as source files or through a REPL interface, by 
 $ ./clox [filepath]
 ```
 
+# Notes
+
+Besides the main purpose of the book, which is the actual implementation of the interpreters, a bunch of concepts and theorems regarding computer science as a whole is also presented throughout its content. Considering that some of this information, if not all of it, is crucial for one's path becoming a somewhat decent computer scientist, a whole [separate section](NOTES.md) is dedicated to it.
+
 # Lox
 
 In a brief description, Lox is a high-level, dynamically typed, garbage-collected programming language that borrows ideas from functional, procedural and object-oriented programming to provide the flexibility expected of a simple scripting language.
 
-It provides most of the functionalities from a basic language implementation, such as data types, expressions (arithmetic, comparative and logical), statements, variables, control flow (conditionals and loops) and functions. Besides that, advanced features such as classes and closures are also specified, whose complexity is deserving of a more thorough depiction.
+It provides most of the functionalities from a basic language implementation, such as data types, expressions, statements, variables, control flow and functions. Besides that, features like classes and closures are also specified, whose complexity is deserving of a more thorough depiction.
 
 ## Classes
 
@@ -56,18 +60,53 @@ class Example {
     }
 
     bar(baz) {
-        print "This is" + baz + ".";
+        print "This is " + baz + ".";
     }
 }
+
+var example = Example();
+print example // "Example instance".
 ```
 
-When the declaration is executed, Lox creates a class object and stores it in a variable named after the class, which turns it to a first-class value in the language.
+When the declaration is executed, Lox creates a class object and stores it in a variable named after the class, which turns it to a first-class value in the language. Classes in Lox are also factory functions for instances, producing them when called.
 
-Classes in Lox are also factory functions for instances, producing them when called like so.
+### Instantiation
+
+Classes in Lox also hold state in the form of properties, which can be freely added onto objects. Assigning to a property creates it if it doesn't already exist.
 
 ```js
-var example = Example();
-print example; // "Example instance".
+example.foobar = "foobar";
+example.qux = "qux";
+```
+
+The keyword `this` is used to access a field or method on the class object from within a method.
+
+### Initialization
+
+If a class has a method named `init()`, it is called automatically when the object is constructed.
+
+```js
+class Example {
+    init(foobar, qux) {
+        this.foobar = foobar;
+        this.qux = qux;
+    }
+}
+
+var example = Example("foobar", "qux");
+```
+
+### Inheritance
+
+Lox supports single inheritance. When a class is declared, its inheriting behaviour can be specified with `<`. Every method defined in the superclass is also available to its subclasses, including `init()`.
+
+```js
+class Text < Example {
+    init(foobar, qux, quux) {
+        super.init(foobar, qux);
+        this.quux = quux;
+    }
+}
 ```
 
 ## Grammar
@@ -167,10 +206,6 @@ ALPHA           = "a" ... "z" | "A" ... "Z" | "_" ;
 
 DIGIT           = "0" ... "9" ;
 ```
-
-# Notes
-
-Besides the main purpose of the book, which is the actual implementation of the interpreters, a bunch of concepts and theorems regarding computer science as a whole is also presented throughout its content. Considering that some of this information, if not all of it, is crucial for one's path becoming a somewhat decent computer scientist, a whole [separate section](NOTES.md) is dedicated to it.
 
 # License
 
